@@ -98,16 +98,13 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         directory = os.path.dirname(self.filepath)
         if self.multiple == False:
             filename = os.path.basename(self.filepath)        
-            f = open(os.path.join(directory, filename), "rb")
             from_trmdlsv(directory, filename, self.rare, self.loadlods, self.bonestructh)
-            f.close()
             return {'FINISHED'}  
         else:
             file_list = sorted(os.listdir(directory))
             obj_list = [item for item in file_list if item.endswith('.trmdl')]
             for item in obj_list:
                 from_trmdlsv(directory, item, self.rare, self.loadlods, self.bonestructh)
-                f.close()
             return {'FINISHED'}
 
     @classmethod
