@@ -43,7 +43,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
     trsklmapped = []
     materials = []
     bone_structure = None
-    trskl = None
     trmsh = None
     trmtr = None
     
@@ -67,7 +66,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
     trmsh_lod1 = trmdl.Meshes(1).Filename().decode('utf-8')
     trmsh_lod2 = trmdl.Meshes(2).Filename().decode('utf-8')
     trmsh_lods_array = [trmsh, trmsh_lod1, trmsh_lod2]
-    trskl = trmdl.Skeleton().Filename().decode('utf-8')
+    try:
+        trskl = trmdl.Skeleton().Filename().decode('utf-8')
+    except:
+        trskl = None
     if trmsh.startswith(('au_')): chara_check = "CommonNPC"
     elif trmsh.startswith(('bu_')): chara_check = "CommonNPC"
     elif trmsh.startswith(('cf_')): chara_check = "CommonNPC"
