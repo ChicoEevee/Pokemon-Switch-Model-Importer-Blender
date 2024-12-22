@@ -9,10 +9,6 @@ import json
 from bpy.props import *
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
-from Titan.Model.TRMDL import TRMDL
-from Titan.Model.TRSKL import TRSKL
-import flatbuffers
 bl_info = {
     "name": "Pokémon Switch V3 (.TRMDL)",
     "author": "Scarlett/SomeKitten, Tavi, Luma & ElChicoEevee",
