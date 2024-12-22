@@ -11,7 +11,7 @@ from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 bl_info = {
     "name": "Pokémon Switch V3 (.TRMDL)",
-    "author": "Scarlett/SomeKitten, Tavi, Luma & ElChicoEevee",
+    "author": "SomeKitten, Shararamosh, Tavi, Luma & ElChicoEevee",
     "version": (2, 0, 0),
     "blender": (3, 3, 0),
     "location": "File > Import",
@@ -115,34 +115,88 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         :return: True if active, False otherwise.
         """
         return True
+
+class ImportGfbanm(bpy.types.Operator, ImportHelper):
+    """
+    Class for operator that imports GFBANM files.
+    """
+    bl_idname = "import.gfbanm"
+    bl_label = "Import GFBANM/TRANM"
+    bl_description = "Import one or multiple GFBANM/TRANM files"
+    directory: StringProperty()
+    filter_glob: StringProperty(default="*.gfbanm;*.tranm", options={'HIDDEN'})
+    files: CollectionProperty(type=bpy.types.PropertyGroup)
+    ignore_origin_location: BoolProperty(
+        name="Ignore Origin Location",
+        description="Ignore Origin Location",
+        default=False
+    )
+
+    def execute(self, context: bpy.types.Context):
+        """
+        Executing import menu.
+        :param context: Blender's context.
+        """
+        if not attempt_install_flatbuffers(self):
+            self.report({"ERROR"}, "Failed to install flatbuffers library using pip. "
+                                   "To use this addon, put Python flatbuffers library folder "
+                                   "to this path: " + get_site_packages_path() + ".")
+            return {"CANCELLED"}
+        from .gfbanm_importer import import_animation
+        if self.files:
+            b = False
+            for file in self.files:
+                try:
+                    import_animation(context, os.path.join(str(self.directory), file.name),
+                                     self.ignore_origin_location)
+                except OSError as e:
+                    self.report({"INFO"}, "Failed to import " + os.path.join(str(self.directory),
+                                                                             file.name) + ".\n" + str(
+                        e))
+                else:
+                    b = True
+                finally:
+                    pass
+            if b:
+                return {"FINISHED"}
+            return {"CANCELLED"}
+        try:
+            import_animation(context, self.filepath, self.ignore_origin_location)
+        except OSError as e:
+            self.report({"ERROR"}, "Failed to import " + self.filepath + ".\n" + str(e))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+    @classmethod
+    def poll(cls, _context: bpy.types.Context):
+        """
+        Checking if operator can be active.
+        :param _context: Blender's Context.
+        :return: True if active, False otherwise.
+        """
+        return True
+
+    def draw(self, _context: bpy.types.Context):
+        box = self.layout.box()
+        box.prop(self, "ignore_origin_location", text="Ignore Origin Location")
+
 def menu_func_export(self, context):
     self.layout.operator(TRSKLJsonExport.bl_idname, text="Pokémon Trinity Skeleton (.json)")
 
 def menu_func_import(operator: bpy.types.Operator, context: bpy.types.Context):
-    """
-    Function that adds GFBANM import operator.
-    :param operator: Blender's operator.
-    :param context: Blender's Context.
-    :return:
-    """
     operator.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
-
+    operator.layout.operator(ImportGfbanm.bl_idname, text="Pokémon Switch Anim (.gfbanm, .tranm)")
 
 def register():
-    """
-    Registering addon.
-    """
     register_class(PokeSVImport)
+    register_class(ImportGfbanm)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     register_class(TRSKLJsonExport)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
 def unregister():
-    """
-    Unregistering addon.
-    :return:
-    """
     unregister_class(PokeSVImport)
+    unregister_class(ImportGfbanm)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     unregister_class(TRSKLJsonExport)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)

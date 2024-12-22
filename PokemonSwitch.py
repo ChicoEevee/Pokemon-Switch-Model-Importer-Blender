@@ -150,7 +150,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
                 new_bone = new_armature.edit_bones.new(entry["transform_node"]["name"])
                 new_bone.use_connect = False
                 new_bone.use_inherit_rotation = True
-                new_bone.use_local_location = False
                 if entry["bone"] != None:
                     if entry["bone"]["inherit_scale"] == True:
                         

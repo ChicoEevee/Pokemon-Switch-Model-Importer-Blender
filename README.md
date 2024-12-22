@@ -1,6 +1,8 @@
 # Pokémon Switch V2 Model Importer/Exporter Blender
 A Python script for Blender to import/export models from Pokémon Games in Nintendo Switch.
 
+Credits to Shararamosh for the work and letting me add the animation importer to this addon.
+
 Model Exports are still WIP currently you can only export skeleton as a json and you will need to convert it to binary with flatc and the schema from PkZukan/PokeDocs
 
 HUGE thanks to Random Talking Bush for making the original maxscript for this
