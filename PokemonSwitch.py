@@ -63,8 +63,14 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
     else:
         trmtr = open(os.path.join(filep, trmtr_name), "rb") 
     trmsh = trmdl.Meshes(0).Filename().decode('utf-8')
-    trmsh_lod1 = trmdl.Meshes(1).Filename().decode('utf-8')
-    trmsh_lod2 = trmdl.Meshes(2).Filename().decode('utf-8')
+    try:
+        trmsh_lod2 = trmdl.Meshes(2).Filename().decode('utf-8')
+    except:
+        trmsh_lod2 = None
+    try:
+        trmsh_lod1 = trmdl.Skeleton(1).Filename().decode('utf-8')
+    except:
+        trmsh_lod1 = None
     trmsh_lods_array = [trmsh, trmsh_lod1, trmsh_lod2]
     try:
         trskl = trmdl.Skeleton().Filename().decode('utf-8')
