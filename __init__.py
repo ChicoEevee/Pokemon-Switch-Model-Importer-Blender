@@ -9,7 +9,6 @@ import json
 from bpy.props import *
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
-import flatbuffers
 bl_info = {
     "name": "Pokémon Switch V3 (.TRMDL)",
     "author": "Scarlett/SomeKitten, Tavi, Luma & ElChicoEevee",
