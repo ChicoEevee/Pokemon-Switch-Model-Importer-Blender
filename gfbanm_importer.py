@@ -8,7 +8,6 @@ import math
 
 import bpy
 from mathutils import Vector, Quaternion, Matrix
-import numpy as np
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
@@ -118,33 +117,31 @@ def apply_animation_to_tracks(
             context.scene.render.fps = frame_rate
             context.scene.render.fps_base = 1.0
         apply_track_transforms_to_posebone(
-            pose_bone, list(zip(t_list, r_list, s_list)), ignore_origin_location
+            context, pose_bone, list(zip(t_list, r_list, s_list)), ignore_origin_location
         )
     context.scene.frame_start = 0
     context.scene.frame_end = context.scene.frame_start + key_frames - 1
 
 
 def apply_track_transforms_to_posebone(
+        context: bpy.types.Context,
         pose_bone: bpy.types.PoseBone,
         transforms: list[(tuple[float, float, float] | None, Quaternion | None, Vector | None)],
         ignore_origin_location: bool,
 ):
     """
     Applies track transforms to PoseBone for every keyframe of animation.
+    :param context: Blender's Context.
     :param pose_bone: Target PoseBone.
     :param transforms: List of (Location, Rotation, Scaling) track transform tuples.
     :param ignore_origin_location: Whether to ignore location transforms from Origin track.
     """
-    pose_bone.bone.use_local_location = False
-    if hasattr(pose_bone.bone, "inherit_scale"):
-        pose_bone.bone.inherit_scale = "NONE"
-    if hasattr(pose_bone.bone, "use_inherit_scale"):
-        pose_bone.bone.use_inherit_scale = False
     matrix = pose_bone.bone.matrix_local
     if pose_bone.parent:
         matrix = pose_bone.parent.bone.matrix_local.inverted() @ matrix
     loc, rot, _ = matrix.decompose()
     for i, transform in enumerate(transforms):
+        pose_bone.bone.use_local_location = False
         has_location = False
         has_rotation = False
         has_scale = False
@@ -154,13 +151,19 @@ def apply_track_transforms_to_posebone(
             loc_z = transform[0][2] - loc[2]
             if not ignore_origin_location or pose_bone.bone.name.casefold() != "Origin".casefold():
                 pose_bone.location = Vector((loc_x, loc_y, loc_z))
-            has_location = True
+                has_location = True
         if transform[1] is not None:
             pose_bone.rotation_quaternion = rot.conjugated() @ transform[1]
             has_rotation = True
         if transform[2] is not None:
             pose_bone.scale = Vector(transform[2])
             has_scale = True
+        if not has_location and not has_rotation and not has_scale:
+            continue
+        context.view_layer.update() # This call applies armature space transforms to pose_bone.
+        m = get_posebone_global_matrix(pose_bone)
+        pose_bone.bone.use_local_location = True
+        set_posebone_global_matrix(pose_bone, m)
         if has_location:
             pose_bone.keyframe_insert(data_path="location", frame=i)
         if has_rotation:
