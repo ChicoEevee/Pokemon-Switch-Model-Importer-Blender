@@ -142,12 +142,14 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
                 new_bone = new_armature.edit_bones.new(entry["transform_node"]["name"])
                 new_bone.use_connect = False
                 new_bone.use_inherit_rotation = True
+                new_bone.use_local_location = False
                 if entry["bone"] != None:
-                    if entry["bone"]["inherit_scale"] == False:
+                    if entry["bone"]["inherit_scale"] == True:
+                        
                         if blender_version[0] == 4:
-                            new_bone.inherit_scale = 'FULL'
+                            new_bone.inherit_scale = 'NONE'
                         else:
-                            new_bone.use_inherit_scale = True
+                            new_bone.use_inherit_scale = False
                 
                 new_bone.head = (0,0,0)
                 new_bone.tail = (0, 0, 0.1)
