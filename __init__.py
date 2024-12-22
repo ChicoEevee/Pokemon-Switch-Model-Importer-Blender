@@ -5,13 +5,17 @@ import os
 import sys
 import subprocess
 import bpy
+import json
 from bpy.props import *
 from bpy.utils import register_class, unregister_class
-from bpy_extras.io_utils import ImportHelper
-
+from bpy_extras.io_utils import ImportHelper, ExportHelper
+sys.path.append(os.path.join(os.path.dirname(__file__), "."))
+from Titan.Model.TRMDL import TRMDL
+from Titan.Model.TRSKL import TRSKL
+import flatbuffers
 bl_info = {
-    "name": "Pokémon Switch V2 (.TRMDL)",
-    "author": "Scarlett/SomeKitten & ElChicoEevee",
+    "name": "Pokémon Switch V3 (.TRMDL)",
+    "author": "Scarlett/SomeKitten, Tavi, Luma & ElChicoEevee",
     "version": (2, 0, 0),
     "blender": (3, 3, 0),
     "location": "File > Import",
@@ -20,7 +24,26 @@ bl_info = {
     "category": "Import",
 }
 
+class TRSKLJsonExport(bpy.types.Operator, ExportHelper):
+    bl_idname = "custom_export_scene.trskljsonexport"
+    bl_label = "Export"
+    bl_options = {'PRESET', 'UNDO'}
 
+    filename_ext = ".json"  # Specify the default file extension
+
+    def execute(self, context):
+        directory = os.path.dirname(self.filepath)
+        armature_obj = bpy.context.active_object
+        from .ExportTRSKL import export_armature_matrix
+        if armature_obj and armature_obj.type == 'ARMATURE':
+            data = export_armature_matrix(armature_obj)
+            # Save the data to a JSON file
+            with open(os.path.join(directory, self.filepath), "w") as file:
+                json.dump(data, file, indent=4)
+            print("Bone matrices exported successfully.")
+        else:
+            print("No armature selected.")
+        return {'FINISHED'}
 class PokeSVImport(bpy.types.Operator, ImportHelper):
     bl_idname = "custom_import_scene.pokemonscarletviolet"
     bl_label = "Import"
@@ -99,6 +122,8 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         :return: True if active, False otherwise.
         """
         return True
+def menu_func_export(self, context):
+    self.layout.operator(TRSKLJsonExport.bl_idname, text="Pokémon Trinity Skeleton (.json)")
 
 def menu_func_import(operator: bpy.types.Operator, context: bpy.types.Context):
     """
@@ -116,7 +141,8 @@ def register():
     """
     register_class(PokeSVImport)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-
+    register_class(TRSKLJsonExport)
+    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
 def unregister():
     """
@@ -125,7 +151,8 @@ def unregister():
     """
     unregister_class(PokeSVImport)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
-
+    unregister_class(TRSKLJsonExport)
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
 def attempt_install_flatbuffers(operator: bpy.types.Operator = None) -> bool:
     """
