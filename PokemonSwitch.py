@@ -809,7 +809,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
 
             if not 'ScViShader' in bpy.data.materials or not 'ScViShader' in bpy.data.materials:
                 try:
-                    response = requests.get("https://raw.githubusercontent.com/ChicoEevee/Pokemon-Switch-V2-Model-Importer-Blender/master/SCVIShader.blend", stream=True)
+                    response = requests.get("https://github.com/ChicoEevee/Pokemon-Switch-V2-Model-Importer-Blender/raw/refs/heads/main/SCVIShader.blend", stream=True)
                     with open(os.path.join(addons_path,"addons/SCVIShader.blend"), 'wb') as file:
                         file.write(response.content)
                 except:
