@@ -43,7 +43,7 @@ class Bone(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from .BoneMatrix import BoneMatrix
+            from Titan.Model.BoneMatrix import BoneMatrix
             obj = BoneMatrix()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -78,3 +78,55 @@ def BoneEnd(builder):
 
 def End(builder):
     return BoneEnd(builder)
+
+import Titan.Model.BoneMatrix
+try:
+    from typing import Optional
+except:
+    pass
+
+class BoneT(object):
+
+    # BoneT
+    def __init__(self):
+        self.inheritScale = False  # type: bool
+        self.influenceSkinning = False  # type: bool
+        self.matrix = None  # type: Optional[Titan.Model.BoneMatrix.BoneMatrixT]
+
+    @classmethod
+    def InitFromBuf(cls, buf, pos):
+        bone = Bone()
+        bone.Init(buf, pos)
+        return cls.InitFromObj(bone)
+
+    @classmethod
+    def InitFromPackedBuf(cls, buf, pos=0):
+        n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, pos)
+        return cls.InitFromBuf(buf, pos+n)
+
+    @classmethod
+    def InitFromObj(cls, bone):
+        x = BoneT()
+        x._UnPack(bone)
+        return x
+
+    # BoneT
+    def _UnPack(self, bone):
+        if bone is None:
+            return
+        self.inheritScale = bone.InheritScale()
+        self.influenceSkinning = bone.InfluenceSkinning()
+        if bone.Matrix() is not None:
+            self.matrix = Titan.Model.BoneMatrix.BoneMatrixT.InitFromObj(bone.Matrix())
+
+    # BoneT
+    def Pack(self, builder):
+        if self.matrix is not None:
+            matrix = self.matrix.Pack(builder)
+        BoneStart(builder)
+        BoneAddInheritScale(builder, self.inheritScale)
+        BoneAddInfluenceSkinning(builder, self.influenceSkinning)
+        if self.matrix is not None:
+            BoneAddMatrix(builder, matrix)
+        bone = BoneEnd(builder)
+        return bone

@@ -64,7 +64,7 @@ class IKControl(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             x = o + self._tab.Pos
-            from .Vec3 import Vec3
+            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -75,7 +75,7 @@ class IKControl(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
             x = o + self._tab.Pos
-            from .Vec4 import Vec4
+            from Titan.Model.Vec4 import Vec4
             obj = Vec4()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -134,3 +134,82 @@ def IKControlEnd(builder):
 
 def End(builder):
     return IKControlEnd(builder)
+
+import Titan.Model.Vec3
+import Titan.Model.Vec4
+try:
+    from typing import Optional
+except:
+    pass
+
+class IKControlT(object):
+
+    # IKControlT
+    def __init__(self):
+        self.ikName = None  # type: str
+        self.ikChainStart = None  # type: str
+        self.ikChainEnd = None  # type: str
+        self.ikType = None  # type: str
+        self.res4 = 0  # type: int
+        self.ikPos = None  # type: Optional[Titan.Model.Vec3.Vec3T]
+        self.ikRot = None  # type: Optional[Titan.Model.Vec4.Vec4T]
+
+    @classmethod
+    def InitFromBuf(cls, buf, pos):
+        ikcontrol = IKControl()
+        ikcontrol.Init(buf, pos)
+        return cls.InitFromObj(ikcontrol)
+
+    @classmethod
+    def InitFromPackedBuf(cls, buf, pos=0):
+        n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, pos)
+        return cls.InitFromBuf(buf, pos+n)
+
+    @classmethod
+    def InitFromObj(cls, ikcontrol):
+        x = IKControlT()
+        x._UnPack(ikcontrol)
+        return x
+
+    # IKControlT
+    def _UnPack(self, ikcontrol):
+        if ikcontrol is None:
+            return
+        self.ikName = ikcontrol.IkName()
+        self.ikChainStart = ikcontrol.IkChainStart()
+        self.ikChainEnd = ikcontrol.IkChainEnd()
+        self.ikType = ikcontrol.IkType()
+        self.res4 = ikcontrol.Res4()
+        if ikcontrol.IkPos() is not None:
+            self.ikPos = Titan.Model.Vec3.Vec3T.InitFromObj(ikcontrol.IkPos())
+        if ikcontrol.IkRot() is not None:
+            self.ikRot = Titan.Model.Vec4.Vec4T.InitFromObj(ikcontrol.IkRot())
+
+    # IKControlT
+    def Pack(self, builder):
+        if self.ikName is not None:
+            ikName = builder.CreateString(self.ikName)
+        if self.ikChainStart is not None:
+            ikChainStart = builder.CreateString(self.ikChainStart)
+        if self.ikChainEnd is not None:
+            ikChainEnd = builder.CreateString(self.ikChainEnd)
+        if self.ikType is not None:
+            ikType = builder.CreateString(self.ikType)
+        IKControlStart(builder)
+        if self.ikName is not None:
+            IKControlAddIkName(builder, ikName)
+        if self.ikChainStart is not None:
+            IKControlAddIkChainStart(builder, ikChainStart)
+        if self.ikChainEnd is not None:
+            IKControlAddIkChainEnd(builder, ikChainEnd)
+        if self.ikType is not None:
+            IKControlAddIkType(builder, ikType)
+        IKControlAddRes4(builder, self.res4)
+        if self.ikPos is not None:
+            ikPos = self.ikPos.Pack(builder)
+            IKControlAddIkPos(builder, ikPos)
+        if self.ikRot is not None:
+            ikRot = self.ikRot.Pack(builder)
+            IKControlAddIkRot(builder, ikRot)
+        ikcontrol = IKControlEnd(builder)
+        return ikcontrol

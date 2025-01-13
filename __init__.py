@@ -5,7 +5,6 @@ import os
 import sys
 import subprocess
 import bpy
-import json
 from bpy.props import *
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
@@ -20,26 +19,33 @@ bl_info = {
     "category": "Import",
 }
 
-class TRSKLJsonExport(bpy.types.Operator, ExportHelper):
-    bl_idname = "custom_export_scene.trskljsonexport"
+class TRSKLExport(bpy.types.Operator, ExportHelper):
+    """
+    Class for operator that exports TRSKL files.
+    """
+    bl_idname = "custom_export_scene.trsklexport"
     bl_label = "Export"
     bl_options = {'PRESET', 'UNDO'}
-
-    filename_ext = ".json"  # Specify the default file extension
-
-    def execute(self, context):
+    filename_ext = ".trskl"  # Specify the default file extension
+    def execute(self, context: bpy.types.Context):
         directory = os.path.dirname(self.filepath)
-        armature_obj = bpy.context.active_object
-        from .ExportTRSKL import export_armature_matrix
-        if armature_obj and armature_obj.type == 'ARMATURE':
-            data = export_armature_matrix(armature_obj)
-            # Save the data to a JSON file
-            with open(os.path.join(directory, self.filepath), "w") as file:
-                json.dump(data, file, indent=4)
-            print("Bone matrices exported successfully.")
-        else:
-            print("No armature selected.")
-        return {'FINISHED'}
+        armature_obj = context.active_object
+        from .trskl_exporter import export_skeleton
+        if armature_obj and armature_obj.type == "ARMATURE":
+            if not attempt_install_flatbuffers(self):
+                self.report({"ERROR"}, "Failed to install flatbuffers library using pip. "
+                                       "To use this addon, put Python flatbuffers library folder "
+                                       "to this path: " + get_site_packages_path() + ".")
+                return {"CANCELLED"}
+            data = export_skeleton(armature_obj)
+            # Save the data to a TRSKL file
+            file_path = os.path.join(directory, self.filepath)
+            with open(file_path, "wb") as file:
+                file.write(data)
+                print("Skeleton information successfully exported to "+file_path+".")
+            return {"FINISHED"}
+        print("No armature selected.")
+        return {"CANCELLED"}
 class PokeSVImport(bpy.types.Operator, ImportHelper):
     bl_idname = "custom_import_scene.pokemonscarletviolet"
     bl_label = "Import"
@@ -72,7 +78,7 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
             description="Bone Extras (WIP)",
             default=False,
             )
-    def draw(self, context):
+    def draw(self, _context: bpy.types.Context):
         layout = self.layout
 
         box = layout.box()
@@ -88,7 +94,7 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         box.prop(self, 'bonestructh')
         
 
-    def execute(self, context: bpy.types.Context):
+    def execute(self, _context: bpy.types.Context):
         if not attempt_install_flatbuffers(self):
             self.report({"ERROR"}, "Failed to install flatbuffers library using pip. "
                                    "To use this addon, put Python flatbuffers library folder "
@@ -96,22 +102,21 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
             return {"CANCELLED"}
         from .PokemonSwitch import from_trmdlsv
         directory = os.path.dirname(self.filepath)
-        if self.multiple == False:
-            filename = os.path.basename(self.filepath)        
+        if not self.multiple:
+            filename = os.path.basename(self.filepath)
             from_trmdlsv(directory, filename, self.rare, self.loadlods, self.bonestructh)
-            return {'FINISHED'}  
-        else:
-            file_list = sorted(os.listdir(directory))
-            obj_list = [item for item in file_list if item.endswith('.trmdl')]
-            for item in obj_list:
-                from_trmdlsv(directory, item, self.rare, self.loadlods, self.bonestructh)
             return {'FINISHED'}
+        file_list = sorted(os.listdir(directory))
+        obj_list = [item for item in file_list if item.endswith('.trmdl')]
+        for item in obj_list:
+            from_trmdlsv(directory, item, self.rare, self.loadlods, self.bonestructh)
+        return {'FINISHED'}
 
     @classmethod
-    def poll(cls, context: bpy.types.Context):
+    def poll(cls, _context: bpy.types.Context):
         """
         Checking if operator can be active.
-        :param context: Blender's Context.
+        :param _context: Blender's Context.
         :return: True if active, False otherwise.
         """
         return True
@@ -180,10 +185,10 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         box = self.layout.box()
         box.prop(self, "ignore_origin_location", text="Ignore Origin Location")
 
-def menu_func_export(self, context):
-    self.layout.operator(TRSKLJsonExport.bl_idname, text="Pokémon Trinity Skeleton (.json)")
+def menu_func_export(self, _context: bpy.types.Context):
+    self.layout.operator(TRSKLExport.bl_idname, text="Pokémon Trinity Skeleton (.trskl)")
 
-def menu_func_import(operator: bpy.types.Operator, context: bpy.types.Context):
+def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
     operator.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
     operator.layout.operator(ImportGfbanm.bl_idname, text="Pokémon Switch Anim (.gfbanm, .tranm)")
 
@@ -191,14 +196,14 @@ def register():
     register_class(PokeSVImport)
     register_class(ImportGfbanm)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-    register_class(TRSKLJsonExport)
+    register_class(TRSKLExport)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
 def unregister():
     unregister_class(PokeSVImport)
     unregister_class(ImportGfbanm)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
-    unregister_class(TRSKLJsonExport)
+    unregister_class(TRSKLExport)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
 def attempt_install_flatbuffers(operator: bpy.types.Operator = None) -> bool:
