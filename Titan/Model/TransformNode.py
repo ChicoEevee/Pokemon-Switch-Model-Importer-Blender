@@ -36,7 +36,7 @@ class TransformNode(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from .Transform import Transform
+            from Titan.Model.Transform import Transform
             obj = Transform()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -47,7 +47,7 @@ class TransformNode(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = o + self._tab.Pos
-            from .Vec3 import Vec3
+            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -58,7 +58,7 @@ class TransformNode(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             x = o + self._tab.Pos
-            from .Vec3 import Vec3
+            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -151,3 +151,83 @@ def TransformNodeEnd(builder):
 
 def End(builder):
     return TransformNodeEnd(builder)
+
+import Titan.Model.Transform
+import Titan.Model.Vec3
+try:
+    from typing import Optional
+except:
+    pass
+
+class TransformNodeT(object):
+
+    # TransformNodeT
+    def __init__(self):
+        self.name = None  # type: str
+        self.transform = None  # type: Optional[Titan.Model.Transform.TransformT]
+        self.scalePivot = None  # type: Optional[Titan.Model.Vec3.Vec3T]
+        self.rotatePivot = None  # type: Optional[Titan.Model.Vec3.Vec3T]
+        self.parentIdx = -1  # type: int
+        self.rigIdx = -1  # type: int
+        self.effectNode = None  # type: str
+        self.priority = 0  # type: int
+
+    @classmethod
+    def InitFromBuf(cls, buf, pos):
+        transformNode = TransformNode()
+        transformNode.Init(buf, pos)
+        return cls.InitFromObj(transformNode)
+
+    @classmethod
+    def InitFromPackedBuf(cls, buf, pos=0):
+        n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, pos)
+        return cls.InitFromBuf(buf, pos+n)
+
+    @classmethod
+    def InitFromObj(cls, transformNode):
+        x = TransformNodeT()
+        x._UnPack(transformNode)
+        return x
+
+    # TransformNodeT
+    def _UnPack(self, transformNode):
+        if transformNode is None:
+            return
+        self.name = transformNode.Name()
+        if transformNode.Transform() is not None:
+            self.transform = Titan.Model.Transform.TransformT.InitFromObj(transformNode.Transform())
+        if transformNode.ScalePivot() is not None:
+            self.scalePivot = Titan.Model.Vec3.Vec3T.InitFromObj(transformNode.ScalePivot())
+        if transformNode.RotatePivot() is not None:
+            self.rotatePivot = Titan.Model.Vec3.Vec3T.InitFromObj(transformNode.RotatePivot())
+        self.parentIdx = transformNode.ParentIdx()
+        self.rigIdx = transformNode.RigIdx()
+        self.effectNode = transformNode.EffectNode()
+        self.priority = transformNode.Priority()
+
+    # TransformNodeT
+    def Pack(self, builder):
+        if self.name is not None:
+            name = builder.CreateString(self.name)
+        if self.transform is not None:
+            transform = self.transform.Pack(builder)
+        if self.effectNode is not None:
+            effectNode = builder.CreateString(self.effectNode)
+        TransformNodeStart(builder)
+        if self.name is not None:
+            TransformNodeAddName(builder, name)
+        if self.transform is not None:
+            TransformNodeAddTransform(builder, transform)
+        if self.scalePivot is not None:
+            scalePivot = self.scalePivot.Pack(builder)
+            TransformNodeAddScalePivot(builder, scalePivot)
+        if self.rotatePivot is not None:
+            rotatePivot = self.rotatePivot.Pack(builder)
+            TransformNodeAddRotatePivot(builder, rotatePivot)
+        TransformNodeAddParentIdx(builder, self.parentIdx)
+        TransformNodeAddRigIdx(builder, self.rigIdx)
+        if self.effectNode is not None:
+            TransformNodeAddEffectNode(builder, effectNode)
+        TransformNodeAddPriority(builder, self.priority)
+        transformNode = TransformNodeEnd(builder)
+        return transformNode
