@@ -13,16 +13,18 @@ import flatbuffers
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
+# pylint: disable=wrong-import-position, import-error
+
 from Titan.Model import TRSKL, TransformNode, Transform, Bone, BoneMatrix, Vec3
 
-rx90 = Matrix.Rotation(radians(90), 4, 'X')
-ry90 = Matrix.Rotation(radians(90), 4, 'Y')
-rz90 = Matrix.Rotation(radians(90), 4, 'Z')
+rx90 = Matrix.Rotation(radians(90), 4, "X")
+ry90 = Matrix.Rotation(radians(90), 4, "Y")
+rz90 = Matrix.Rotation(radians(90), 4, "Z")
 ryz90 = ry90 @ rz90
 
-rx90n = Matrix.Rotation(radians(-90), 4, 'X')
-ry90n = Matrix.Rotation(radians(-90), 4, 'Y')
-rz90n = Matrix.Rotation(radians(-90), 4, 'Z')
+rx90n = Matrix.Rotation(radians(-90), 4, "X")
+ry90n = Matrix.Rotation(radians(-90), 4, "Y")
+rz90n = Matrix.Rotation(radians(-90), 4, "Z")
 
 
 def is_bone_weighted(armature_obj: bpy.types.Object, bone_name: str):
@@ -96,9 +98,9 @@ def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
             bone = Bone.BoneT()
             if hasattr(posebone.bone, "inherit_scale"):
                 if posebone.bone.inherit_scale not in ("FULL", "NONE", "NONE_LEGACY"):
-                    print("Bone " + posebone.bone.name + " has incompatible scale inheritance mode:"
-                        " "+ posebone.bone.inherit_scale + ". Full scale inheritance will be used"
-                        " instead.")
+                    print(f"Bone {posebone.bone.name} has incompatible scale inheritance mode: "
+                        f"{posebone.bone.inherit_scale}. Full scale inheritance will be used "
+                        "instead.")
                     bone.inheritScale = True
                 else:
                     bone.inheritScale = posebone.bone.inherit_scale == "FULL"
