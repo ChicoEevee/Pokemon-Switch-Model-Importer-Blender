@@ -11,6 +11,8 @@ from mathutils import Vector, Quaternion, Matrix
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
+# pylint: disable=wrong-import-position, import-error
+
 from GFLib.Anim.DynamicRotationTrack import DynamicRotationTrackT
 from GFLib.Anim.DynamicVectorTrack import DynamicVectorTrackT
 from GFLib.Anim.FixedRotationTrack import FixedRotationTrackT
@@ -30,7 +32,7 @@ TransformType = tuple[float, float, float] | Quaternion | None
 def import_animation(
         context: bpy.types.Context,
         file_path: str,
-        ignore_origin_location: bool,
+        ignore_origin_location: bool
 ):
     """
     Imports animation from processing gfbanm file.
@@ -97,6 +99,8 @@ def apply_animation_to_tracks(
     """
     assert (context.object is not None and context.object.type == "ARMATURE"), \
         "Selected object is not Armature."
+    context.scene.frame_start = 1
+    context.scene.frame_end = context.scene.frame_start + key_frames - 1
     action = None
     for track in tracks:
         if track is None or track.name is None or track.name == "":
@@ -119,8 +123,6 @@ def apply_animation_to_tracks(
         apply_track_transforms_to_posebone(
             context, pose_bone, list(zip(t_list, r_list, s_list)), ignore_origin_location
         )
-    context.scene.frame_start = 0
-    context.scene.frame_end = context.scene.frame_start + key_frames - 1
 
 
 def apply_track_transforms_to_posebone(
@@ -164,12 +166,13 @@ def apply_track_transforms_to_posebone(
         m = get_posebone_global_matrix(pose_bone)
         pose_bone.bone.use_local_location = True
         set_posebone_global_matrix(pose_bone, m)
+        current_frame = context.scene.frame_start+i
         if has_location:
-            pose_bone.keyframe_insert(data_path="location", frame=i)
+            pose_bone.keyframe_insert(data_path="location", frame=current_frame)
         if has_rotation:
-            pose_bone.keyframe_insert(data_path="rotation_quaternion", frame=i)
+            pose_bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame)
         if has_scale:
-            pose_bone.keyframe_insert(data_path="scale", frame=i)
+            pose_bone.keyframe_insert(data_path="scale", frame=current_frame)
 
 
 def get_posebone_global_matrix(pose_bone: bpy.types.PoseBone) -> Matrix:
