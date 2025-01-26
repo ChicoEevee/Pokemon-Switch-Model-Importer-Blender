@@ -11,7 +11,7 @@ from mathutils import Vector, Quaternion, Matrix
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
-# pylint: disable=wrong-import-position, import-error
+# pylint: disable=wrong-import-position, import-error, too-many-arguments, too-many-branches
 
 from GFLib.Anim.DynamicRotationTrack import DynamicRotationTrackT
 from GFLib.Anim.DynamicVectorTrack import DynamicVectorTrackT
@@ -26,7 +26,11 @@ from GFLib.Anim.BoneTrack import BoneTrackT
 from GFLib.Anim.Vec3 import Vec3T
 from GFLib.Anim.sVec3 import sVec3T
 
-TransformType = tuple[float, float, float] | Quaternion | None
+TransformType = Vector | Quaternion | None
+VectorTrackType = (FixedVectorTrackT | DynamicVectorTrackT | Framed16VectorTrackT |
+                   Framed8VectorTrackT)
+RotationTrackType = (FixedRotationTrackT | DynamicRotationTrackT | Framed16RotationTrackT |
+                     Framed8RotationTrackT)
 
 
 def import_animation(
@@ -61,9 +65,6 @@ def import_animation(
             raise OSError(file_path + " contains invalid skeleton.tracks chunk.")
         print("Tracks amount: " + str(len(anm.skeleton.tracks)) + ".")
         previous_mode = context.object.mode
-        select_bones = {}
-        for bone in context.object.data.bones:
-            select_bones.update({bone: bone.select})
         if context.object.mode != "POSE":
             bpy.ops.object.mode_set(mode="POSE")
         apply_animation_to_tracks(
@@ -74,8 +75,6 @@ def import_animation(
             anm.skeleton.tracks,
             ignore_origin_location,
         )
-        for bone, select in select_bones.items():
-            bone.select = select
         if previous_mode != context.object.mode:
             bpy.ops.object.mode_set(mode=previous_mode)
 
@@ -128,7 +127,7 @@ def apply_animation_to_tracks(
 def apply_track_transforms_to_posebone(
         context: bpy.types.Context,
         pose_bone: bpy.types.PoseBone,
-        transforms: list[(tuple[float, float, float] | None, Quaternion | None, Vector | None)],
+        transforms: list[(Vector | None, Quaternion | None, Vector | None)],
         ignore_origin_location: bool,
 ):
     """
@@ -143,36 +142,50 @@ def apply_track_transforms_to_posebone(
         matrix = pose_bone.parent.bone.matrix_local.inverted() @ matrix
     loc, rot, _ = matrix.decompose()
     for i, transform in enumerate(transforms):
-        pose_bone.bone.use_local_location = False
-        has_location = False
-        has_rotation = False
-        has_scale = False
+        l, r, s = None, None, None
         if transform[0] is not None:
-            loc_x = transform[0][0] - loc[0]
-            loc_y = transform[0][1] - loc[1]
-            loc_z = transform[0][2] - loc[2]
             if not ignore_origin_location or pose_bone.bone.name.casefold() != "Origin".casefold():
-                pose_bone.location = Vector((loc_x, loc_y, loc_z))
-                has_location = True
+                l = transform[0] - loc
         if transform[1] is not None:
-            pose_bone.rotation_quaternion = rot.conjugated() @ transform[1]
-            has_rotation = True
+            r = rot.conjugated() @ transform[1]
         if transform[2] is not None:
-            pose_bone.scale = Vector(transform[2])
-            has_scale = True
-        if not has_location and not has_rotation and not has_scale:
+            s = Vector(transform[2])
+        if not set_posebone_transform(context, pose_bone, (l, r, s)):
             continue
-        context.view_layer.update() # This call applies armature space transforms to pose_bone.
-        m = get_posebone_global_matrix(pose_bone)
-        pose_bone.bone.use_local_location = True
-        set_posebone_global_matrix(pose_bone, m)
-        current_frame = context.scene.frame_start+i
-        if has_location:
+        current_frame = context.scene.frame_start + i
+        if l is not None:
             pose_bone.keyframe_insert(data_path="location", frame=current_frame)
-        if has_rotation:
+        if r is not None:
             pose_bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame)
-        if has_scale:
+        if s is not None:
             pose_bone.keyframe_insert(data_path="scale", frame=current_frame)
+
+
+def set_posebone_transform(context: bpy.types.Context, pose_bone: bpy.types.PoseBone,
+                           transform: (Vector | None, Quaternion | None, Vector | None)) -> bool:
+    """
+    Applies transforms to PoseBone using Bone's use_local_location and view_layer's update.
+    :param context: Blender's Context.
+    :param pose_bone: Target PoseBone.
+    :param transform: (Location, Rotation, Scaling) tuple in armature space.
+    :return: True if any of 3 transforms was applied, false otherwise.
+    """
+    if transform[0] is None and transform[1] is None and transform[2] is None:
+        return False
+    if transform[0] is not None:
+        pose_bone.location = transform[0]
+    if transform[1] is not None:
+        pose_bone.rotation_quaternion = transform[1]
+    if transform[2] is not None:
+        pose_bone.scale = transform[2]
+    if not pose_bone.bone.use_local_location:
+        return True
+    pose_bone.bone.use_local_location = False
+    context.view_layer.update()
+    m = get_posebone_global_matrix(pose_bone)
+    pose_bone.bone.use_local_location = True
+    set_posebone_global_matrix(pose_bone, m)
+    return True
 
 
 def get_posebone_global_matrix(pose_bone: bpy.types.PoseBone) -> Matrix:
@@ -195,12 +208,8 @@ def set_posebone_global_matrix(pose_bone: bpy.types.PoseBone, m: Matrix):
     pose_bone.matrix = pose_bone.id_data.matrix_world.inverted() @ m
 
 
-def get_track_transforms(
-        track: DynamicVectorTrackT | FixedVectorTrackT | Framed16VectorTrackT |
-               Framed8VectorTrackT | DynamicRotationTrackT | FixedRotationTrackT |
-               Framed16RotationTrackT | Framed8RotationTrackT | None,
-        key_frames: int
-) -> list[TransformType]:
+def get_track_transforms(track: VectorTrackType | RotationTrackType | None, key_frames: int) -> \
+list[TransformType]:
     """
     Generalized function to extract track transforms (Vector or Rotation).
     :param track: The track object containing keyframe data.
@@ -212,19 +221,19 @@ def get_track_transforms(
     if track is None or getattr(track, "co", None) is None:
         return transforms
     if isinstance(track, FixedVectorTrackT):
-        transforms[0] = (track.co.x, track.co.y, track.co.z)
+        transforms[0] = Vector((track.co.x, track.co.y, track.co.z))
         transforms[-1] = transforms[0]
     elif isinstance(track, DynamicVectorTrackT):
         for i in range(min(len(track.co), key_frames)):
-            transforms[i] = (track.co[i].x, track.co[i].y, track.co[i].z)
+            transforms[i] = Vector((track.co[i].x, track.co[i].y, track.co[i].z))
     elif isinstance(track, (Framed16VectorTrackT, Framed8VectorTrackT)):
         for i in range(min(len(track.co), len(track.frames))):
             if -1 < track.frames[i] < key_frames:
-                transforms[track.frames[i]] = (track.co[i].x, track.co[i].y, track.co[i].z)
+                transforms[track.frames[i]] = Vector((track.co[i].x, track.co[i].y, track.co[i].z))
     if isinstance(track, FixedRotationTrackT):
-        e = get_quaternion_from_packed(track.co)
-        transforms[0] = e
-        transforms[-1] = e
+        q = get_quaternion_from_packed(track.co)
+        transforms[0] = q
+        transforms[-1] = q
     elif isinstance(track, DynamicRotationTrackT):
         for i in range(min(len(track.co), key_frames)):
             transforms[i] = get_quaternion_from_packed(track.co[i])

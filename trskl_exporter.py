@@ -13,7 +13,8 @@ import flatbuffers
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
-# pylint: disable=wrong-import-position, import-error
+# pylint: disable=wrong-import-position, import-error, too-many-statements, too-many-branches
+# pylint: disable=too-many-locals
 
 from Titan.Model import TRSKL, TransformNode, Transform, Bone, BoneMatrix, Vec3
 
@@ -99,8 +100,8 @@ def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
             if hasattr(posebone.bone, "inherit_scale"):
                 if posebone.bone.inherit_scale not in ("FULL", "NONE", "NONE_LEGACY"):
                     print(f"Bone {posebone.bone.name} has incompatible scale inheritance mode: "
-                        f"{posebone.bone.inherit_scale}. Full scale inheritance will be used "
-                        "instead.")
+                          f"{posebone.bone.inherit_scale}. Full scale inheritance will be used "
+                          "instead.")
                     bone.inheritScale = True
                 else:
                     bone.inheritScale = posebone.bone.inherit_scale == "FULL"
@@ -158,10 +159,14 @@ def create_bone_matrix(matrix: Matrix) -> BoneMatrix.BoneMatrixT:
     :returns: BoneMatrixT object.
     """
     m = BoneMatrix.BoneMatrixT()
-    m.x = create_vec3(round(matrix[0][0], 6), round(matrix[0][1], 6), round(matrix[0][2], 6))
-    m.y = create_vec3(round(matrix[1][0], 6), round(matrix[1][1], 6), round(matrix[1][2], 6))
-    m.z = create_vec3(round(matrix[2][0], 6), round(matrix[2][1], 6), round(matrix[2][2], 6))
-    m.w = create_vec3(round(matrix[0][3], 6), round(matrix[1][3], 6), round(matrix[2][3], 6))
+    m.x = create_vec3(round(matrix[0][0], 6) + 0.0, round(matrix[0][1], 6) + 0.0,
+                      round(matrix[0][2], 6) + 0.0)
+    m.y = create_vec3(round(matrix[1][0], 6) + 0.0, round(matrix[1][1], 6) + 0.0,
+                      round(matrix[1][2], 6) + 0.0)
+    m.z = create_vec3(round(matrix[2][0], 6) + 0.0, round(matrix[2][1], 6) + 0.0,
+                      round(matrix[2][2], 6) + 0.0)
+    m.w = create_vec3(round(matrix[0][3], 6) + 0.0, round(matrix[1][3], 6) + 0.0,
+                      round(matrix[2][3], 6) + 0.0)
     return m
 
 
@@ -174,7 +179,5 @@ def create_vec3(x: float, y: float, z: float) -> Vec3.Vec3T:
     :returns: Vec3T object.
     """
     v = Vec3.Vec3T()
-    v.x = x
-    v.y = y
-    v.z = z
+    v.x, v.y, v.z = x, y, z
     return v
