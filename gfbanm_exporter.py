@@ -6,12 +6,12 @@ import sys
 import math
 
 import bpy
-from mathutils import Vector, Quaternion, Matrix
+from mathutils import Vector, Quaternion
 import flatbuffers
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
-# pylint: disable=wrong-import-position, import-error, too-many-branches
+# pylint: disable=wrong-import-position, import-error, too-many-branches, consider-using-dict-items
 
 from GFLib.Anim.Animation import AnimationT
 from GFLib.Anim.BoneAnimation import BoneAnimationT
@@ -34,40 +34,42 @@ RotationTrackType = (FixedRotationTrackT | DynamicRotationTrackT | Framed16Rotat
                      Framed8RotationTrackT)
 
 
-def export_animation(context: bpy.types.Context, does_loop: bool) -> int | bytearray:
+def export_animation(context: bpy.types.Context, does_loop: bool,
+                     use_action_range: bool) -> int | bytearray:
     """
     Exports armature animation to GFBANM/TRANM format.
     :param context: Blender's Context.
     :param does_loop: True if animation is looping.
+    :param use_action_range: True if using action's frame range instead of scene's.
     :return: GFBANM/TRANM bytearray.
     """
     assert context.object is not None and context.object.type == "ARMATURE", \
         "Target Armature not selected."
+    current_frame = context.scene.frame_current
+    if use_action_range and context.object.animation_data and context.object.animation_data.action:
+        frame_range = (int(context.object.animation_data.action.frame_range[0]),
+                       int(context.object.animation_data.action.frame_range[1]))
+        assert frame_range[1] - frame_range[0] > -1, "Action has invalid frame range set."
+    else:
+        frame_range = (context.scene.frame_start, context.scene.frame_end)
+        assert frame_range[1] - frame_range[0] > -1, "Scene has incorrect frame range set."
     animation = AnimationT()
     animation.info = InfoT()
-    animation.info.keyFrames = context.scene.frame_end - context.scene.frame_start + 1
+    animation.info.keyFrames = frame_range[1] - frame_range[0] + 1
     animation.info.frameRate = int(context.scene.render.fps / context.scene.render.fps_base)
     animation.info.doesLoop = int(does_loop)
     animation.skeleton = BoneAnimationT()
     animation.skeleton.tracks = []
-    current_frame = context.scene.frame_current
-    for pose_bone in context.object.pose.bones:
-        print(f"Exporting keyframes for {pose_bone.name} track.")
-        transforms = get_track_transforms_from_posebone(context, pose_bone)
-        t_list = []
-        r_list = []
-        s_list = []
-        for transform in transforms:
-            t_list.append(transform[0])
-            r_list.append(transform[1])
-            s_list.append(transform[2])
+    transforms = get_all_track_transforms(context, frame_range)
+    for bone_name in transforms:
+        print(f"Exporting keyframes for {bone_name} track.")
         track = BoneTrackT()
-        track.name = pose_bone.name
-        track.translate = vector_list_to_vector_track(t_list)
+        track.name = bone_name
+        track.translate = vector_list_to_vector_track(transforms[bone_name][0])
         track.translateType = vector_track_to_type(track.translate)
-        track.rotate = quaternion_list_to_rotation_track(r_list)
+        track.rotate = quaternion_list_to_rotation_track(transforms[bone_name][1])
         track.rotateType = rotation_track_to_type(track.rotate)
-        track.scale = vector_list_to_vector_track(s_list)
+        track.scale = vector_list_to_vector_track(transforms[bone_name][2])
         track.scaleType = vector_track_to_type(track.scale)
         animation.skeleton.tracks.append(track)
     context.scene.frame_set(current_frame)
@@ -94,7 +96,6 @@ def quantize_float(f: float) -> int:
 def pack_quaternion_to_48bit(q: Quaternion) -> (int, int, int):
     """
     Packs Blender Quaternion into 48-bit integer Vector.
-    To-do: fix return values. There may be something wrong with index-based swizzling.
     :param q: Blender Quaternion.
     :return: X, Y, Z values of integer Vector.
     """
@@ -109,24 +110,30 @@ def pack_quaternion_to_48bit(q: Quaternion) -> (int, int, int):
     if is_negative == 1:
         q_list = [-x for x in q_list]
     if max_index == 0:
-        tx = quantize_float(q_list[3])
-        ty = quantize_float(q_list[1])
-        tz = quantize_float(q_list[2])
-    elif max_index == 1:
-        tx = quantize_float(q_list[0])
-        ty = quantize_float(q_list[3])
-        tz = quantize_float(q_list[2])
-    elif max_index == 2:
-        tx = quantize_float(q_list[0])
-        ty = quantize_float(q_list[1])
+        tx = quantize_float(q_list[1])
+        ty = quantize_float(q_list[2])
         tz = quantize_float(q_list[3])
+    elif max_index == 1:
+        tx = quantize_float(q_list[2])
+        ty = quantize_float(q_list[3])
+        tz = quantize_float(q_list[0])
+    elif max_index == 2:
+        tx = quantize_float(q_list[1])
+        ty = quantize_float(q_list[3])
+        tz = quantize_float(q_list[0])
     else:
-        tx = quantize_float(q_list[0])
-        ty = quantize_float(q_list[1])
-        tz = quantize_float(q_list[2])
+        tx = quantize_float(q_list[1])
+        ty = quantize_float(q_list[2])
+        tz = quantize_float(q_list[0])
     pack = (tz << 30) | (ty << 15) | tx
     pack = (pack << 3) | ((is_negative << 2) | max_index)
-    return pack & 0xFFFF, (pack >> 16) & 0xFFFF, (pack >> 32) & 0xFFFF
+    x, y, z = pack & 0xFFFF, (pack >> 16) & 0xFFFF, (pack >> 32) & 0xFFFF
+    # Fixes for X offset across all packed values.
+    if max_index == 0:
+        x = min(65535, x + 3)
+    else:
+        x = max(0, x - 1)
+    return x, y, z
 
 
 def vector_list_to_vector_track(vector_list: list[Vector | None]) -> None | VectorTrackType | None:
@@ -278,29 +285,38 @@ def rotation_track_to_type(track: RotationTrackType) -> int:
     return 0
 
 
-def get_track_transforms_from_posebone(context: bpy.types.Context, pose_bone: bpy.types.PoseBone) \
-        -> list[(Vector, Quaternion, Vector)]:
+def get_posebone_transforms(pose_bone: bpy.types.PoseBone) -> (Vector, Quaternion, Vector):
     """
-    Returns list of track transforms for every keyframe of animation.
-    To-do: The resulting location and rotation are currently incorrect, needs a fix.
-    :param context: Blender's Context.
+    Gets armature space transforms of PoseBone.
     :param pose_bone: Target PoseBone.
-    :return: List of (Location, Rotation, Scaling) track transform tuples.
+    :return: Tuple of Translation, Rotation, Scale in armature space.
     """
-    transforms = []
-    matrix = pose_bone.bone.matrix_local
+    matrix = pose_bone.matrix
     if pose_bone.parent:
-        matrix = pose_bone.parent.bone.matrix_local.inverted() @ matrix
-    rot = matrix.to_quaternion()
-    for i in range(context.scene.frame_start, context.scene.frame_end + 1):
+        matrix = pose_bone.parent.matrix.inverted() @ matrix
+    translation = matrix.to_translation()
+    rotation = matrix.to_quaternion()
+    scale = pose_bone.matrix_basis.to_scale()
+    return translation, rotation, scale
+
+
+def get_all_track_transforms(context: bpy.types.Context, frame_range: (int, int)) -> dict[
+    str, (list[Vector], list[Quaternion], list[Vector])]:
+    """
+    Gets transforms for each PoseBone of Armature on each frame of action.
+    :param context: Blender's Context.
+    :param frame_range: Frame range.
+    :return: Dict containing PoseBone name and list of (Location, Rotation, Scale) transforms.
+    """
+    transforms = {}
+    for i in range(frame_range[0], frame_range[1] + 1):
         context.scene.frame_set(i)
-        matrix_initial = Matrix.Identity(4)
-        if pose_bone.parent:
-            matrix_initial = (pose_bone.parent.matrix @
-                              pose_bone.parent.bone.matrix_local.inverted() @
-                              pose_bone.bone.matrix_local @ matrix_initial)
-        translation = (matrix + pose_bone.matrix - matrix_initial).to_translation()
-        rotation = rot.conjugated().rotation_difference(pose_bone.matrix_basis.to_quaternion())
-        scale = pose_bone.matrix_basis.to_scale()
-        transforms.append((translation, rotation, scale))
+        for pose_bone in context.object.pose.bones:
+            translation, rotation, scale = get_posebone_transforms(pose_bone)
+            if pose_bone.name not in transforms:
+                transforms.update({pose_bone.name: ([translation], [rotation], [scale])})
+            else:
+                transforms[pose_bone.name][0].append(translation)
+                transforms[pose_bone.name][1].append(rotation)
+                transforms[pose_bone.name][2].append(scale)
     return transforms
