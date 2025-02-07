@@ -9,7 +9,7 @@ import bpy
 from bpy.props import *
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
-
+import json
 # pylint: disable=import-outside-toplevel, wrong-import-position, import-error, unused-import
 # pylint: disable=too-few-public-methods
 
@@ -21,7 +21,7 @@ bl_info = {
     "location": "File > Import",
     "description": "Blender addon for importing and exporting Nintendo Switch Pokémon Assets.",
     "warning": "",
-    "category": "Import"
+    "category": "Import",
 }
 
 
@@ -55,6 +55,135 @@ class TRSKLExport(bpy.types.Operator, ExportHelper):
             return {"FINISHED"}
         print("No armature selected.")
         return {"CANCELLED"}
+
+
+class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
+    """This appears in the tooltip of the operator and in the generated docs"""
+
+    bl_idname = "export.trmshtrmbf"
+    bl_label = "Export TRMSH TRMBF"
+
+    # ExportHelper mixin class uses this
+    filename_ext = ".json"
+
+    filter_glob: StringProperty(
+        default="*.trskl",
+        options={"HIDDEN"},
+        maxlen=255,  # Max internal buffer length, longer would be clamped.
+    )
+
+    # List of operator properties, the attributes will be assigned
+    # to the class instance from the operator settings before calling.
+    use_normal: BoolProperty(
+        name="Use Normal",
+        default=True,
+    )
+
+    use_tangent: BoolProperty(
+        name="Use Normal",
+        default=True,
+    )
+
+    use_tangent: BoolProperty(
+        name="Use Tangent",
+        default=True,
+    )
+
+    use_binormal: BoolProperty(
+        name="Use Binormal",
+        default=False,
+    )
+
+    use_uv: BoolProperty(
+        name="Use UVs",
+        default=True,
+    )
+
+    uv_count: IntProperty(
+        name="UV Layer Count",
+        default=1,
+    )
+
+    use_color: BoolProperty(
+        name="Use Vertex Colors",
+        default=False,
+    )
+
+    color_count: IntProperty(
+        name="Color Layer Count",
+        default=1,
+    )
+    filenaming: StringProperty(
+        name="Filename IMPORTANT",
+        default="pm0133_00_00",
+    )
+    use_skinning: BoolProperty(name="Use Skinning", default=True)
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+
+    def draw(self, _context: bpy.types.Context):
+        """
+        Drawing exporter's menu.
+        :param _context: Blender's context.
+        """
+        self.layout.prop(self, "use_normal")
+        self.layout.prop(self, "use_tangent")
+        self.layout.prop(self, "use_binormal")
+        self.layout.prop(self, "use_uv")
+        self.layout.prop(self, "uv_count")
+        self.layout.prop(self, "use_color")
+        self.layout.prop(self, "color_count")
+        self.layout.prop(self, "filenaming")
+        
+        
+    def execute(self, context):
+        from .trmshbf_exporter import write_mesh_data
+        from .trmshbf_exporter import write_buffer_data
+        from .trmshbf_exporter import readtrskl
+        dest_dir = os.path.dirname(self.filepath)
+        bone_dict = readtrskl(self.filepath.replace(".json",".trskl"))
+        export_settings = {
+            "normal": self.use_normal,
+            "tangent": self.use_tangent,
+            "binormal": self.use_binormal,
+            "uv": self.use_uv,
+            "uv_count": self.uv_count,
+            "color": self.use_color,
+            "color_count": self.color_count,
+            "skinning": self.use_skinning,
+        }
+        trmbf = []
+        trmsh = []
+        for obj in bpy.context.selected_objects:
+            trmbf.append(write_buffer_data(
+                context,
+                obj,
+                export_settings,
+                bone_dict
+            ))
+            trmsh.append(write_mesh_data(
+                context,
+                obj,
+                export_settings,
+            ))
+        complete_trmbf = {
+            "unused": 0,
+            "buffers": trmbf,
+        }
+        complete_trmsh = {
+            "unk0": 0,
+            "meshes": trmsh,
+            "buffer_name": self.filenaming + ".trmbf",
+        }
+        
+        # Export complete trmbf
+        f = open(os.path.join(dest_dir, self.filenaming + ".trmbf" + self.filename_ext), "w", encoding="utf-8")
+        f.write(json.dumps(complete_trmbf, indent=4))
+        f.close()
+        # Export complete_trmsh
+        f = open(os.path.join(dest_dir, self.filenaming + ".trmsh" + self.filename_ext), "w", encoding="utf-8")
+        f.write(json.dumps(complete_trmsh, indent=4))
+        f.close()
+        return {"FINISHED"}
 
 
 class PokeSVImport(bpy.types.Operator, ImportHelper):
@@ -128,7 +257,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
     """
     Class for operator that imports Pokémon Animation files.
     """
-    bl_idname = "import_scene.gfbanm"
+    bl_idname = "import.gfbanm"
     bl_label = "Import GFBANM/TRANM"
     bl_description = "Import one or multiple Nintendo Switch Pokémon Animation files"
     directory: StringProperty()
@@ -197,7 +326,7 @@ def on_export_format_changed(struct: bpy.types.bpy_struct, context: bpy.types.Co
         return
     if not context.space_data.active_operator:
         return
-    if context.space_data.active_operator.bl_idname != "EXPORT_SCENE_OT_gfbanm":
+    if context.space_data.active_operator.bl_idname != "EXPORT_OT_gfbanm":
         return
     context.space_data.params.filename = ExportGfbanm.ensure_filepath_matches_export_format(
         context.space_data.params.filename,
@@ -214,7 +343,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
     """
     Class for operator that exports GFBANM/TRANM files.
     """
-    bl_idname = "export_scene.gfbanm"
+    bl_idname = "export.gfbanm"
     bl_label = "Export GFBANM/TRANM"
     bl_description = "Export current action as Nintendo Switch Pokémon Animation file"
     bl_options = {"PRESET", "UNDO"}
@@ -237,12 +366,6 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
     does_loop: BoolProperty(
         name="Looping",
         description="Export as looping animation",
-        default=False
-    )
-
-    use_action_range: BoolProperty(
-        name="Use action's frame range",
-        description="If available, use action's frame range instead of scene's",
         default=False
     )
 
@@ -304,7 +427,6 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         """
         self.layout.prop(self, "export_format")
         self.layout.prop(self, "does_loop")
-        self.layout.prop(self, "use_action_range")
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         """
@@ -319,7 +441,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
             return {"CANCELLED"}
         directory = os.path.dirname(self.filepath)
         from .gfbanm_exporter import export_animation
-        data = export_animation(context, self.does_loop, self.use_action_range)
+        data = export_animation(context, self.does_loop)
         file_path = os.path.join(directory, self.filepath)
         with open(file_path, "wb") as file:
             file.write(data)
@@ -357,7 +479,9 @@ class PokemonSwitchExportMenu(bpy.types.Menu):
         """
         self.layout.operator(TRSKLExport.bl_idname, text="Pokémon Trinity Skeleton (.trskl)")
         self.layout.operator(ExportGfbanm.bl_idname,
-                             text="Pokémon Animation (.gfbanm/.tranm)")
+                             text="Pokémon Animation (.gfbanm/.tranm) [WIP]")
+        self.layout.operator(ExportTRMBFMSH.bl_idname,
+                             text="Trinity Mesh Buffer Jsons (.trmsh/.trmbf)")
 
 
 def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
@@ -391,6 +515,7 @@ def register():
     register_class(PokemonSwitchExportMenu)
     register_class(TRSKLExport)
     register_class(ExportGfbanm)
+    register_class(ExportTRMBFMSH)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
 
@@ -405,6 +530,7 @@ def unregister():
     unregister_class(PokemonSwitchExportMenu)
     unregister_class(TRSKLExport)
     unregister_class(ExportGfbanm)
+    unregister_class(ExportTRMBFMSH)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
 
