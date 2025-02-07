@@ -58,8 +58,9 @@ class TRSKLExport(bpy.types.Operator, ExportHelper):
 
 
 class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
-    """This appears in the tooltip of the operator and in the generated docs"""
-
+    """
+    Class for operator that exports meshes to trinity json files.
+    """
     bl_idname = "export.trmshtrmbf"
     bl_label = "Export TRMSH TRMBF"
 
