@@ -340,84 +340,6 @@ def on_export_format_changed(struct: bpy.types.bpy_struct, context: bpy.types.Co
     bpy.ops.file.refresh()
 
 
-class ExportGfbanm(bpy.types.Operator, ExportHelper):
-    """
-    Class for operator that exports GFBANM/TRANM files.
-    """
-    bl_idname = "export.gfbanm"
-    bl_label = "Export GFBANM/TRANM"
-    bl_description = "Export current action as Nintendo Switch Pokémon Animation file"
-    bl_options = {"PRESET", "UNDO"}
-    filename_ext = ""
-    filter_glob: StringProperty(default="*.gfbanm", options={"HIDDEN"})
-    filepath: StringProperty(subtype="FILE_PATH")
-
-    export_format: EnumProperty(
-        name="Format",
-        items=(("GFBANM", "GFBANM (.gfbanm)",
-                "Exports action in format used by Pokémon Sword/Shield."),
-               ("TRANM", "TRANM (.tranm)",
-                "Exports action in format used by Pokémon Legends: Arceus and "
-                "Pokémon Scarlet/Violet.")),
-        description="Output format for action",
-        default=0,
-        update=on_export_format_changed
-    )
-
-    does_loop: BoolProperty(
-        name="Looping",
-        description="Export as looping animation",
-        default=False
-    )
-
-    @staticmethod
-    def ensure_filepath_matches_export_format(filepath: str, export_format: str) -> str:
-        """
-        Ensures file path matches export format.
-        :param filepath: File path string.
-        :param export_format: Export format string.
-        :return: Modified file path string.
-        """
-        filename = os.path.basename(filepath)
-        if not filename:
-            return filepath
-        stem, ext = os.path.splitext(filename)
-        if stem.startswith(".") and not ext:
-            stem, ext = "", stem
-        desired_ext = ".tranm" if export_format == "TRANM" else ".gfbanm"
-        ext_lower = ext.lower()
-        if ext_lower not in [".gfbanm", ".tranm"]:
-            return filepath + desired_ext
-        if ext_lower != desired_ext:
-            filepath = filepath[:-len(ext)]
-            return filepath + desired_ext
-        return filepath
-
-    def check(self, _context: bpy.types.Context) -> bool:
-        """
-        Checks if operator needs to be updated.
-        :param _context: Blender's Context.
-        :return: True if update is needed, False otherwise.
-        """
-        old_filepath = self.filepath
-        self.filepath = ExportGfbanm.ensure_filepath_matches_export_format(self.filepath,
-                                                                           self.export_format)
-        return self.filepath != old_filepath
-
-    def invoke(self, context: bpy.types.Context, _event: bpy.types.Event) -> set[str]:
-        """
-        Called when operator is invoked by user.
-        :param context: Blender's Context.
-        :param _event: Event invoked.
-        :return: Result.
-        """
-        directory = os.path.dirname(self.filepath)
-        filename = os.path.splitext(os.path.basename(context.blend_data.filepath))[0]
-        obj = context.object
-        if obj and obj.animation_data and obj.animation_data.action:
-            filename = obj.animation_data.action.name
-        self.filepath = ExportGfbanm.ensure_filepath_matches_export_format(
-            os.path.join(directory, filename), self.export_format)
         context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
 
@@ -428,6 +350,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         """
         self.layout.prop(self, "export_format")
         self.layout.prop(self, "does_loop")
+        self.layout.prop(self, "use_action_range")
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         """
@@ -442,7 +365,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
             return {"CANCELLED"}
         directory = os.path.dirname(self.filepath)
         from .gfbanm_exporter import export_animation
-        data = export_animation(context, self.does_loop)
+        data = export_animation(context, self.does_loop, self.use_action_range)
         file_path = os.path.join(directory, self.filepath)
         with open(file_path, "wb") as file:
             file.write(data)
