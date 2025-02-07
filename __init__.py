@@ -12,7 +12,6 @@ from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 
 # pylint: disable=import-outside-toplevel, wrong-import-position, import-error, unused-import
-# pylint: disable=too-few-public-methods
 
 bl_info = {
     "name": "Pokémon Switch V3 (TRMDL, GFBANM/TRANM)",
@@ -21,8 +20,7 @@ bl_info = {
     "blender": (3, 3, 0),
     "location": "File > Import",
     "description": "Blender addon for importing and exporting Nintendo Switch Pokémon Assets.",
-    "warning": "",
-    "category": "Import",
+    "category": "Import"
 }
 
 
@@ -30,7 +28,7 @@ class TRSKLExport(bpy.types.Operator, ExportHelper):
     """
     Class for operator that exports TRSKL files.
     """
-    bl_idname = "custom_export_scene.trsklexport"
+    bl_idname = "export_scene.trskl"
     bl_description = "Export current Armature as TRSKL file"
     bl_label = "Export as TRSKL"
     bl_options = {"PRESET", "UNDO"}
@@ -62,7 +60,7 @@ class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
     """
     Class for operator that exports meshes to trinity json files.
     """
-    bl_idname = "export.trmshtrmbf"
+    bl_idname = "export_scene.trmsh_trmbf"
     bl_label = "Export as TRMSH, TRMBF"
 
     # ExportHelper mixin class uses this
@@ -188,7 +186,7 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
     """
     Class for operator that imports TRMDL files.
     """
-    bl_idname = "custom_import_scene.pokemonscarletviolet"
+    bl_idname = "import_scene.trmdl"
     bl_label = "Import TRMDL"
     bl_description = "Import TRMDL file"
     bl_options = {"PRESET", "UNDO"}
@@ -486,7 +484,7 @@ class PokemonSwitchExportMenu(bpy.types.Menu):
         self.layout.operator(ExportGfbanm.bl_idname,
                              text="Pokémon Animation (.gfbanm/.tranm)")
         self.layout.operator(ExportTRMBFMSH.bl_idname,
-                             text="Trinity Mesh Buffer JSONs (.trmsh, .trmbf)")
+                             text="Pokémon Mesh Buffer JSONs (.trmsh, .trmbf)")
 
 
 def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
