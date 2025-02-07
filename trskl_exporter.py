@@ -4,8 +4,6 @@
 
 import os
 import sys
-from math import radians
-from collections.abc import Iterable
 
 import bpy
 from mathutils import Matrix
@@ -17,16 +15,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 # pylint: disable=too-many-locals
 
 from Titan.Model import TRSKL, TransformNode, Transform, Bone, BoneMatrix, Vec3
-
-rx90 = Matrix.Rotation(radians(90), 4, "X")
-ry90 = Matrix.Rotation(radians(90), 4, "Y")
-rz90 = Matrix.Rotation(radians(90), 4, "Z")
-ryz90 = ry90 @ rz90
-
-rx90n = Matrix.Rotation(radians(-90), 4, "X")
-ry90n = Matrix.Rotation(radians(-90), 4, "Y")
-rz90n = Matrix.Rotation(radians(-90), 4, "Z")
-
 
 def is_bone_weighted(armature_obj: bpy.types.Object, bone_name: str):
     """
@@ -46,34 +34,6 @@ def is_bone_weighted(armature_obj: bpy.types.Object, bone_name: str):
     return False
 
 
-def get_evaluated_pose_bones(armature_obj: bpy.types.Object):
-    """
-    Re-evaluating bones, I guess?
-    What's even exportable_bones? Can I use getattr so that PyCharm does not complain?
-    """
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    evaluated_armature = armature_obj.evaluated_get(depsgraph)
-    return [evaluated_armature.pose.bones[bone.name] for bone in self.exportable_bones]
-
-
-def get_smd_float(f: any) -> float:
-    """
-    Converts value to float and rounds it to 6 digits precision.
-    :param f: Value to convert.
-    :returns: Float.
-    """
-    return f"{float(f):.2f}"
-
-
-def get_smd_vec(iterable: Iterable) -> str:
-    """
-    Converts values of iterable to float and concatenates them to evenly space string.
-    :param iterable: Iterable.
-    :returns: Evenly spaced string.
-    """
-    return " ".join([get_smd_float(val) for val in iterable])
-
-
 def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
     """
     Exports Armature object to trskl file.
@@ -89,7 +49,6 @@ def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
     armature_obj.select_set(True)
     bpy.context.view_layer.objects.active = armature_obj
     bpy.ops.object.mode_set(mode="POSE")
-    mat_blender_to_smd = ry90 @ rz90
     for posebone in armature_obj.pose.bones:
         result = is_bone_weighted(armature_obj, posebone.name)
         parent = posebone.parent
@@ -120,12 +79,8 @@ def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
             parent_index = armature_obj.data.bones.find(posebone.parent.name)
         # Get the bone's Matrix from the current pose
         pose_matrix = posebone.matrix
-        if armature_obj.data.vs.legacy_rotation:
-            pose_matrix @= mat_blender_to_smd
         if parent:
             parent_matrix = parent.matrix
-            if armature_obj.data.vs.legacy_rotation:
-                parent_matrix @= mat_blender_to_smd
             pose_matrix = parent_matrix.inverted() @ pose_matrix
         else:
             pose_matrix = armature_obj.matrix_world @ pose_matrix
@@ -133,12 +88,10 @@ def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
         transform_node.name = posebone.name
         transform_node.transform = Transform.TransformT()
         transform_node.transform.vecScale = create_vec3(1.0, 1.0, 1.0)
-        vals = get_smd_vec(pose_matrix.to_euler()).split()
-        transform_node.transform.vecRot = create_vec3(float(vals[0]), float(vals[1]),
-                                                      float(vals[2]))
-        vals = get_smd_vec(pose_matrix.to_translation()).split()
-        transform_node.transform.vecTranslate = create_vec3(float(vals[0]), float(vals[1]),
-                                                            float(vals[2]))
+        vec = pose_matrix.to_euler()
+        transform_node.transform.vecRot = create_vec3(vec[0], vec[1], vec[2])
+        vec = pose_matrix.to_translation()
+        transform_node.transform.vecTranslate = create_vec3(vec[0], vec[1], vec[2])
         transform_node.scalePivot = create_vec3(0.0, 0.0, 0.0)
         transform_node.rotatePivot = create_vec3(0.0, 0.0, 0.0)
         transform_node.parentIdx = parent_index
