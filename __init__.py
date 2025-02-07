@@ -15,7 +15,7 @@ import json
 
 bl_info = {
     "name": "Pokémon Switch V3 (TRMDL, GFBANM/TRANM)",
-    "author": "SomeKitten, Shararamosh, Tavi, Luma & ElChicoEevee",
+    "author": "SomeKitten, Shararamosh, Tavi, Luma, mv & ElChicoEevee",
     "version": (3, 0, 0),
     "blender": (3, 3, 0),
     "location": "File > Import",
