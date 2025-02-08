@@ -5,16 +5,16 @@ import os
 import sys
 import sysconfig
 import subprocess
-import json
 import bpy
 from bpy.props import *
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 
 # pylint: disable=import-outside-toplevel, wrong-import-position, import-error, unused-import
+# pylint: disable=too-few-public-methods
 
 bl_info = {
-    "name": "Pokémon Switch V3 (TRMDL, GFBANM/TRANM)",
+    "name": "Pokémon Switch V3 (TRMDL, GFBANM/TRANM, TRSKL, TRMBF+TRMSH)",
     "author": "SomeKitten, Shararamosh, Tavi, Luma, mv & ElChicoEevee",
     "version": (3, 0, 0),
     "blender": (3, 3, 0),
@@ -33,13 +33,14 @@ class TRSKLExport(bpy.types.Operator, ExportHelper):
     bl_label = "Export as TRSKL"
     bl_options = {"PRESET", "UNDO"}
     filename_ext = ".trskl"  # Specify the default file extension
+    filter_glob: StringProperty(default="*.gfbanm;*.tranm", options={"HIDDEN"})
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 
     def execute(self, context: bpy.types.Context):
         """
         Executing export menu.
         :param context: Blender's context.
         """
-        directory = os.path.dirname(self.filepath)
         armature_obj = context.active_object
         from .trskl_exporter import export_skeleton
         if armature_obj and armature_obj.type == "ARMATURE":
@@ -47,33 +48,27 @@ class TRSKLExport(bpy.types.Operator, ExportHelper):
                 return {"CANCELLED"}
             data = export_skeleton(armature_obj)
             # Save the data to a TRSKL file
-            file_path = os.path.join(directory, self.filepath)
-            with open(file_path, "wb") as file:
+            with open(self.filepath, "wb") as file:
                 file.write(data)
-                print("Skeleton information successfully exported to " + file_path + ".")
+                print(f"Armature successfully exported to {self.filepath}.")
             return {"FINISHED"}
-        print("No armature selected.")
+        self.report({"ERROR"}, "No Armature selected for export.")
         return {"CANCELLED"}
 
 
 class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
     """
-    Class for operator that exports meshes to trinity json files.
+    Class for operator that exports meshes to TRMBF and TRMSH.
     """
     bl_idname = "export_scene.trmsh_trmbf"
+    bl_description = "Export selected Meshes as TRMSH and TRMBF files for selected TRSKL file"
     bl_label = "Export as TRMSH, TRMBF"
-
-    # ExportHelper mixin class uses this
-    filename_ext = ".json"
+    filename_ext = ".trskl"
 
     filter_glob: StringProperty(
         default="*.trskl",
-        options={"HIDDEN"},
-        maxlen=255,  # Max internal buffer length, longer would be clamped.
+        options={"HIDDEN"}
     )
-
-    # List of operator properties, the attributes will be assigned
-    # to the class instance from the operator settings before calling.
     use_normal: BoolProperty(
         name="Use Normal",
         default=True,
@@ -108,10 +103,6 @@ class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
         name="Color Layer Count",
         default=1,
     )
-    filenaming: StringProperty(
-        name="Filename IMPORTANT",
-        default="pm0133_00_00",
-    )
     use_skinning: BoolProperty(name="Use Skinning", default=True)
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 
@@ -127,16 +118,15 @@ class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
         self.layout.prop(self, "uv_count")
         self.layout.prop(self, "use_color")
         self.layout.prop(self, "color_count")
-        self.layout.prop(self, "filenaming")
 
-    def execute(self, context):
+    def execute(self, _context: bpy.types.Context):
         """
         Executing export menu.
-        :param context: Blender's context.
+        :param _context: Blender's context.
         """
-        from .trmshbf_exporter import write_mesh_data, write_buffer_data, readtrskl
-        dest_dir = os.path.dirname(self.filepath)
-        bone_dict = readtrskl(self.filepath.replace(".json", ".trskl"))
+        if not os.path.isfile(self.filepath):
+            self.report({"ERROR"}, f"{os.path.basename(self.filepath)} is not a TRSKL file.")
+            return {"CANCELLED"}
         export_settings = {
             "normal": self.use_normal,
             "tangent": self.use_tangent,
@@ -147,38 +137,22 @@ class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
             "color_count": self.color_count,
             "skinning": self.use_skinning
         }
-        trmbf = []
-        trmsh = []
-        for obj in bpy.context.selected_objects:
-            trmbf.append(write_buffer_data(
-                context,
-                obj,
-                export_settings,
-                bone_dict
-            ))
-            trmsh.append(write_mesh_data(
-                context,
-                obj,
-                export_settings
-            ))
-        complete_trmbf = {
-            "unused": 0,
-            "buffers": trmbf
-        }
-        complete_trmsh = {
-            "unk0": 0,
-            "meshes": trmsh,
-            "buffer_name": self.filenaming + ".trmbf"
-        }
-
+        from .trmshbf_exporter import trskl_to_dict, export_trmbf_trmsh
+        bone_dict = trskl_to_dict(self.filepath)
+        filename, _ = os.path.splitext(self.filepath)
+        file_path = filename + ".trmbf"
+        trmbf, trmsh = export_trmbf_trmsh(export_settings, bone_dict, file_path)
         # Export complete trmbf
-        with open(os.path.join(dest_dir, self.filenaming + ".trmbf" + self.filename_ext), "w",
-                  encoding="utf-8") as f:
-            f.write(json.dumps(complete_trmbf, indent=4))
-        # Export complete_trmsh
-        with open(os.path.join(dest_dir, self.filenaming + ".trmsh" + self.filename_ext), "w",
-                  encoding="utf-8") as f:
-            f.write(json.dumps(complete_trmsh, indent=4))
+        if trmbf is not None:
+            with open(file_path, "wb") as file:
+                file.write(trmbf)
+                print(f"TRMBF successfully exported to {file_path}.")
+        # Export complete trmsh
+        if trmsh is not None:
+            file_path = filename + ".trmsh"
+            with open(file_path, "wb") as file:
+                file.write(trmsh)
+                print(f"TRMSH successfully exported to {file_path}.")
         return {"FINISHED"}
 
 
@@ -193,30 +167,29 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
     filename_ext = ".trmdl"
     filter_glob: StringProperty(
         default="*.trmdl",
-        options={'HIDDEN'},
-        maxlen=255,
+        options={'HIDDEN'}
     )
     filepath = bpy.props.StringProperty(subtype="FILE_PATH")
     files = CollectionProperty(type=bpy.types.PropertyGroup)
     rare: BoolProperty(
         name="Load Shiny",
         description="Uses rare material instead of normal one",
-        default=False,
+        default=False
     )
     multiple: BoolProperty(
         name="Load All Folder",
         description="Uses rare material instead of normal one",
-        default=False,
+        default=False
     )
     loadlods: BoolProperty(
         name="Load LODs",
         description="Uses rare material instead of normal one",
-        default=False,
+        default=False
     )
     bonestructh: BoolProperty(
         name="Bone Extras (WIP)",
         description="Bone Extras (WIP)",
-        default=False,
+        default=False
     )
 
     def draw(self, _context: bpy.types.Context):
@@ -484,7 +457,7 @@ class PokemonSwitchExportMenu(bpy.types.Menu):
         self.layout.operator(ExportGfbanm.bl_idname,
                              text="Pokémon Animation (.gfbanm/.tranm)")
         self.layout.operator(ExportTRMBFMSH.bl_idname,
-                             text="Pokémon Mesh Buffer JSONs (.trmsh, .trmbf)")
+                             text="Pokémon Trinity Mesh (.trmsh, .trmbf)")
 
 
 def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
