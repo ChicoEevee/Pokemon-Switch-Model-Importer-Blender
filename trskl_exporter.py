@@ -16,6 +16,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
 from Titan.Model import TRSKL, TransformNode, Transform, Bone, BoneMatrix, Vec3
 
+
 def is_bone_weighted(armature_obj: bpy.types.Object, bone_name: str):
     """
     Checks if bone is weighted to any mesh.
@@ -36,9 +37,11 @@ def is_bone_weighted(armature_obj: bpy.types.Object, bone_name: str):
 
 def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
     """
-    Exports Armature object to trskl file.
+    Exports Armature object to TRSKL format.
     :param armature_obj: Armature object.
+    :return: TRSKL bytearray.
     """
+    assert armature_obj and armature_obj.type == "ARMATURE", "Selected object is not Armature."
     transform_nodes = []
     bones = []
     trskl = TRSKL.TRSKLT()
@@ -46,52 +49,52 @@ def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
     trskl.bones = bones
     trskl.iks = []
     # Assume the armature has only one pose for simplicity
-    armature_obj.select_set(True)
-    bpy.context.view_layer.objects.active = armature_obj
-    bpy.ops.object.mode_set(mode="POSE")
-    for posebone in armature_obj.pose.bones:
-        result = is_bone_weighted(armature_obj, posebone.name)
-        parent = posebone.parent
-        matrix = posebone.matrix.inverted() @ (armature_obj.matrix_world.inverted()
-                                               @ armature_obj.matrix_world)
+    for bone in armature_obj.data.bones:
+        result = is_bone_weighted(armature_obj, bone.name)
+        parent = bone.parent
+        matrix = bone.matrix_local.inverted()
         if result:
-            bone = Bone.BoneT()
-            if hasattr(posebone.bone, "inherit_scale"):
-                if posebone.bone.inherit_scale not in ("FULL", "NONE", "NONE_LEGACY"):
-                    print(f"Bone {posebone.bone.name} has incompatible scale inheritance mode: "
-                          f"{posebone.bone.inherit_scale}. Full scale inheritance will be used "
+            bone_obj = Bone.BoneT()
+            if hasattr(bone, "inherit_scale"):
+                if bone.inherit_scale not in ("FULL", "NONE", "NONE_LEGACY"):
+                    print(f"Bone {bone.name} has incompatible scale inheritance mode: "
+                          f"{bone.inherit_scale}. Full scale inheritance will be used "
                           "instead.")
-                    bone.inheritScale = True
+                    bone_obj.inheritScale = False
                 else:
-                    bone.inheritScale = posebone.bone.inherit_scale == "FULL"
+                    bone_obj.inheritScale = bone.inherit_scale != "FULL"
             else:
-                bone.inheritScale = posebone.bone.use_inherit_scale
-            bone.influenceSkinning = True
-            bone.matrix = create_bone_matrix(matrix)
-            bones.append(bone)
+                bone_obj.inheritScale = not bone.use_inherit_scale
+            bone_obj.influenceSkinning = True
+            bone_obj.matrix = create_bone_matrix(matrix)
+            bones.append(bone_obj)
         if result:
-            bone_index = armature_obj.data.bones.find(posebone.name)
+            bone_index = armature_obj.data.bones.find(bone.name)
         else:
             bone_index = -1
         # Get the parent index
         parent_index = -1  # Default value for bones without a parent
-        if posebone.parent:
-            parent_index = armature_obj.data.bones.find(posebone.parent.name)
+        if bone.parent:
+            parent_index = armature_obj.data.bones.find(bone.parent.name)
         # Get the bone's Matrix from the current pose
-        pose_matrix = posebone.matrix
+        pose_matrix = bone.matrix_local
         if parent:
-            parent_matrix = parent.matrix
-            pose_matrix = parent_matrix.inverted() @ pose_matrix
+            parent_matrix = parent.matrix_local.inverted()
         else:
-            pose_matrix = armature_obj.matrix_world @ pose_matrix
+            parent_matrix = armature_obj.matrix_world
+        pose_matrix = parent_matrix @ pose_matrix
         transform_node = TransformNode.TransformNodeT()
-        transform_node.name = posebone.name
+        transform_node.name = bone.name
         transform_node.transform = Transform.TransformT()
         transform_node.transform.vecScale = create_vec3(1.0, 1.0, 1.0)
         vec = pose_matrix.to_euler()
-        transform_node.transform.vecRot = create_vec3(vec[0], vec[1], vec[2])
+        transform_node.transform.vecRot = create_vec3(round(vec[0], 6) + 0.0,
+                                                      round(vec[1], 6) + 0.0,
+                                                      round(vec[2], 6) + 0.0)
         vec = pose_matrix.to_translation()
-        transform_node.transform.vecTranslate = create_vec3(vec[0], vec[1], vec[2])
+        transform_node.transform.vecTranslate = create_vec3(round(vec[0], 6) + 0.0,
+                                                            round(vec[1], 6) + 0.0,
+                                                            round(vec[2], 6) + 0.0)
         transform_node.scalePivot = create_vec3(0.0, 0.0, 0.0)
         transform_node.rotatePivot = create_vec3(0.0, 0.0, 0.0)
         transform_node.parentIdx = parent_index
