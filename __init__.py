@@ -141,7 +141,7 @@ class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
         bone_dict = trskl_to_dict(self.filepath)
         filename, _ = os.path.splitext(self.filepath)
         file_path = filename + ".trmbf"
-        trmbf, trmsh = export_trmbf_trmsh(export_settings, bone_dict, file_path)
+        trmbf, trmsh = export_trmbf_trmsh(export_settings, bone_dict, os.path.basename(file_path))
         # Export complete trmbf
         if trmbf is not None:
             with open(file_path, "wb") as file:
