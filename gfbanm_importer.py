@@ -36,13 +36,15 @@ RotationTrackType = (FixedRotationTrackT | DynamicRotationTrackT | Framed16Rotat
 def import_animation(
         context: bpy.types.Context,
         file_path: str,
-        ignore_origin_location: bool
+        ignore_origin_location: bool,
+        frame_start: float
 ):
     """
     Imports animation from processing gfbanm file.
     :param context: Blender's Context.
     :param file_path: Path to gfbanm file.
     :param ignore_origin_location: Whether to ignore location transforms from Origin track.
+    :param frame_start: Start frame.
     """
     if context.object is None or context.object.type != "ARMATURE":
         raise OSError("Target Armature not selected.")
@@ -64,9 +66,6 @@ def import_animation(
         if anm.skeleton.tracks is None:
             raise OSError(file_path + " contains invalid skeleton.tracks chunk.")
         print("Tracks amount: " + str(len(anm.skeleton.tracks)) + ".")
-        previous_mode = context.object.mode
-        if context.object.mode != "POSE":
-            bpy.ops.object.mode_set(mode="POSE")
         apply_animation_to_tracks(
             context,
             anim_name,
@@ -74,9 +73,8 @@ def import_animation(
             anm.info.keyFrames,
             anm.skeleton.tracks,
             ignore_origin_location,
+            frame_start
         )
-        if previous_mode != context.object.mode:
-            bpy.ops.object.mode_set(mode=previous_mode)
 
 
 def apply_animation_to_tracks(
@@ -86,6 +84,7 @@ def apply_animation_to_tracks(
         key_frames: int,
         tracks: list[BoneTrackT | None],
         ignore_origin_location: bool,
+        frame_start: float
 ):
     """
     Applies animation to bones of selected Armature.
@@ -95,11 +94,15 @@ def apply_animation_to_tracks(
     :param key_frames: Keyframes amount.
     :param tracks: List of BoneTrack objects.
     :param ignore_origin_location: Whether to ignore location transforms from Origin track.
+    :param frame_start: Start frame.
     """
     assert (context.object is not None and context.object.type == "ARMATURE"), \
         "Selected object is not Armature."
-    context.scene.frame_start = 1
-    context.scene.frame_end = context.scene.frame_start + key_frames - 1
+    previous_mode = context.object.mode
+    if context.object.mode != "POSE":
+        bpy.ops.object.mode_set(mode="POSE")
+    previous_position = context.object.data.pose_position
+    context.object.data.pose_position = "POSE"
     action = None
     for track in tracks:
         if track is None or track.name is None or track.name == "":
@@ -119,9 +122,11 @@ def apply_animation_to_tracks(
             context.object.animation_data.action = action
             context.scene.render.fps = frame_rate
             context.scene.render.fps_base = 1.0
-        apply_track_transforms_to_posebone(
-            context, pose_bone, list(zip(t_list, r_list, s_list)), ignore_origin_location
-        )
+        apply_track_transforms_to_posebone(context, pose_bone, list(zip(t_list, r_list, s_list)),
+                                           ignore_origin_location, frame_start)
+    if previous_mode != context.object.mode:
+        bpy.ops.object.mode_set(mode=previous_mode)
+    context.object.data.pose_position = previous_position
 
 
 def apply_track_transforms_to_posebone(
@@ -129,6 +134,7 @@ def apply_track_transforms_to_posebone(
         pose_bone: bpy.types.PoseBone,
         transforms: list[(Vector | None, Quaternion | None, Vector | None)],
         ignore_origin_location: bool,
+        frame_start: float
 ):
     """
     Applies track transforms to PoseBone for every keyframe of animation.
@@ -136,6 +142,7 @@ def apply_track_transforms_to_posebone(
     :param pose_bone: Target PoseBone.
     :param transforms: List of (Location, Rotation, Scaling) track transform tuples.
     :param ignore_origin_location: Whether to ignore location transforms from Origin track.
+    :param frame_start: Start frame.
     """
     matrix = pose_bone.bone.matrix_local
     if pose_bone.parent:
@@ -152,7 +159,7 @@ def apply_track_transforms_to_posebone(
             s = Vector(transform[2])
         if not set_posebone_transform(context, pose_bone, (l, r, s)):
             continue
-        current_frame = context.scene.frame_start + i
+        current_frame = frame_start + i
         if l is not None:
             pose_bone.keyframe_insert(data_path="location", frame=current_frame)
         if r is not None:
@@ -209,7 +216,7 @@ def set_posebone_global_matrix(pose_bone: bpy.types.PoseBone, m: Matrix):
 
 
 def get_track_transforms(track: VectorTrackType | RotationTrackType | None, key_frames: int) -> \
-list[TransformType]:
+        list[TransformType]:
     """
     Generalized function to extract track transforms (Vector or Rotation).
     :param track: The track object containing keyframe data.

@@ -3,14 +3,16 @@
 """
 import os
 import sys
+import ensurepip
 import sysconfig
 import subprocess
+from importlib import import_module
 import bpy
 from bpy.props import *
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 
-# pylint: disable=import-outside-toplevel, wrong-import-position, import-error, unused-import
+# pylint: disable=import-outside-toplevel, wrong-import-position, import-error
 # pylint: disable=too-few-public-methods
 
 bl_info = {
@@ -20,7 +22,8 @@ bl_info = {
     "blender": (3, 3, 0),
     "location": "File > Import",
     "description": "Blender addon for importing and exporting Nintendo Switch Pokémon Assets.",
-    "category": "Import"
+    "category": "Import-Export",
+    "doc_url": "https://github.com/ChicoEevee/Pokemon-Switch-Model-Importer-Blender"
 }
 
 
@@ -237,6 +240,16 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         description="Whether to ignore location transforms for bone named Origin",
         default=False
     )
+    use_scene_start: BoolProperty(
+        name="Start at Scene range",
+        description="Use Scene playback range start frame as first frame of animation",
+        default=False
+    )
+    anim_offset: FloatProperty(
+        name="Animation Offset",
+        description="Offset to apply to animation during import, in frames",
+        default=1.0
+    )
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         """
@@ -255,7 +268,9 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
             for file in self.files:
                 file_path = os.path.join(str(self.directory), file.name)
                 try:
-                    import_animation(context, file_path, self.ignore_origin_location)
+                    import_animation(context, file_path, self.ignore_origin_location,
+                                     context.scene.frame_start if self.use_scene_start
+                                     else self.anim_offset)
                 except OSError as e:
                     self.report({"INFO"}, f"Failed to import {file_path}. {str(e)}")
                 else:
@@ -266,7 +281,9 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                 return {"FINISHED"}
             return {"CANCELLED"}
         try:
-            import_animation(context, self.filepath, self.ignore_origin_location)
+            import_animation(context, self.filepath, self.ignore_origin_location,
+                             context.scene.frame_start if self.use_scene_start
+                             else self.anim_offset)
         except OSError as e:
             self.report({"ERROR"}, f"Failed to import {self.filepath}. {str(e)}")
             return {"CANCELLED"}
@@ -278,6 +295,10 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         :param _context: Blender's context.
         """
         self.layout.prop(self, "ignore_origin_location")
+        self.layout.prop(self, "use_scene_start")
+        sub = self.layout.column()
+        sub.enabled = not self.use_scene_start
+        sub.prop(self, "anim_offset")
 
 
 def on_export_format_changed(struct: bpy.types.bpy_struct, context: bpy.types.Context):
@@ -517,7 +538,7 @@ def attempt_install_flatbuffers(operator: bpy.types.Operator = None) -> bool:
     """
     if are_flatbuffers_installed():
         return True
-    subprocess.call([sys.executable, "-m", "ensurepip"])
+    ensurepip.bootstrap()
     subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
     subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "flatbuffers"])
     if are_flatbuffers_installed():
@@ -544,7 +565,7 @@ def are_flatbuffers_installed() -> bool:
     :return: True or False.
     """
     try:
-        import flatbuffers
+        import_module("flatbuffers")
     except ModuleNotFoundError:
         return False
     return True
