@@ -68,7 +68,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
     except:
         trmsh_lod2 = None
     try:
-        trmsh_lod1 = trmdl.Skeleton(1).Filename().decode('utf-8')
+        trmsh_lod1 = trmdl.Meshes(1).Filename().decode('utf-8')
     except:
         trmsh_lod1 = None
     trmsh_lods_array = [trmsh, trmsh_lod1, trmsh_lod2]
@@ -940,9 +940,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
         trmsh_count = 1
                         
     for w in range(trmsh_count):
-        if os.path.exists(os.path.join(filep, trmsh_lods_array[w])):
+        if os.path.exists(os.path.join(filep, str(trmsh_lods_array[w]))):
             poly_group_array = []
-            trmsh = open(os.path.join(filep, trmsh_lods_array[w]), "rb")
+            trmsh = open(os.path.join(filep, str(trmsh_lods_array[w])), "rb")
             trmsh_file_start = readlong(trmsh)
             print("Parsing TRMSH...")
             fseek(trmsh, trmsh_file_start)
