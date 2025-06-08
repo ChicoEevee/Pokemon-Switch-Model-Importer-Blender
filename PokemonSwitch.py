@@ -875,30 +875,17 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
 
 
                 if mat["mat_enable_highlight_map"]:
-                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")                        
-                    if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png")) == True:
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png")) == True and mat["mat_name"] == "eye_r":
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png")) == True and mat["mat_name"] == "eye_l":
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")    
+                    if "r_eye" in material.name:
+                        if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "r_eye_msk") + ".png")):
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "r_eye_msk") + ".png"))
+                    elif "l_eye" in material.name:
+                        if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "l_eye_msk") + ".png")):
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "l_eye_msk") + ".png"))
                     else:
-                        try:
-                            for x in range(10,30):
-                                if os.path.exists(os.path.join(filep.replace(f"pm0025_{x}_00", "pm0025_00_00"), "pm0025_00_00_eye_msk.png")) == True and "pm0025" in trmtr.name:
-                                    highlight_image_texture.image = bpy.data.images.load(os.path.join(filep.replace(f"pm0025_{x}_00", "pm0025_00_00"), "pm0025_00_00_eye_msk.png"))
-                                    highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                        except:
-                            print("No Highlight")
+                        if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "eye_msk") + ".png")):
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "eye_msk") + ".png"))
+
                     material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
                 if mat["mat_enable_normal_map"]:
                     normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
