@@ -874,8 +874,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
                     material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
 
                 if mat["mat_enable_highlight_map"]:
-                    print(mat["mat_highmsk0"])
-                    print(mat)
                 
                     highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     base_path = os.path.join(filep, mat["mat_lym0"][:-5])
