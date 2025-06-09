@@ -873,18 +873,27 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
                     material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
                     material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
 
-
                 if mat["mat_enable_highlight_map"]:
-                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")    
+                    print(mat["mat_highmsk0"])
+                    print(mat)
+                
+                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    base_path = os.path.join(filep, mat["mat_lym0"][:-5])
+                    
                     if "r_eye" in material.name:
-                        if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "r_eye_msk") + ".png")):
-                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "r_eye_msk") + ".png"))
+                        primary = base_path.replace("eye_lym", "r_eye_msk") + ".png"
                     elif "l_eye" in material.name:
-                        if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "l_eye_msk") + ".png")):
-                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "l_eye_msk") + ".png"))
+                        primary = base_path.replace("eye_lym", "l_eye_msk") + ".png"
                     else:
-                        if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "eye_msk") + ".png")):
-                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5].replace("eye_lym", "eye_msk") + ".png"))
+                        primary = None
+                
+                    fallback = base_path.replace("eye_lym", "eye_msk").replace("lym", "msk") + ".png"
+                
+                    for path in [primary, fallback] if primary else [fallback]:
+                        full_path = os.path.join(filep, path)
+                        if os.path.exists(full_path):
+                            highlight_image_texture.image = bpy.data.images.load(full_path)
+                            break
 
                     material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
                 if mat["mat_enable_normal_map"]:
