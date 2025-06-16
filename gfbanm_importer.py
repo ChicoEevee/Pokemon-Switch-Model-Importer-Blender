@@ -98,11 +98,10 @@ def apply_animation_to_tracks(
     """
     assert (context.object is not None and context.object.type == "ARMATURE"), \
         "Selected object is not Armature."
-    previous_mode = context.object.mode
-    if context.object.mode != "POSE":
-        bpy.ops.object.mode_set(mode="POSE")
-    previous_position = context.object.data.pose_position
-    context.object.data.pose_position = "POSE"
+    for pose_bone in context.object.pose.bones:
+        print("Clearing pose for " + pose_bone.name + " bone.")
+        pose_bone.matrix_basis = Matrix.Identity(4)
+    context.view_layer.update()
     action = None
     for track in tracks:
         if track is None or track.name is None or track.name == "":
@@ -122,15 +121,12 @@ def apply_animation_to_tracks(
             context.object.animation_data.action = action
             context.scene.render.fps = frame_rate
             context.scene.render.fps_base = 1.0
-        apply_track_transforms_to_posebone(context, pose_bone, list(zip(t_list, r_list, s_list)),
+        apply_track_transforms_to_posebone(pose_bone, list(zip(t_list, r_list, s_list)),
                                            ignore_origin_location, frame_start)
-    if previous_mode != context.object.mode:
-        bpy.ops.object.mode_set(mode=previous_mode)
-    context.object.data.pose_position = previous_position
+    context.view_layer.update()
 
 
 def apply_track_transforms_to_posebone(
-        context: bpy.types.Context,
         pose_bone: bpy.types.PoseBone,
         transforms: list[(Vector | None, Quaternion | None, Vector | None)],
         ignore_origin_location: bool,
@@ -138,81 +134,36 @@ def apply_track_transforms_to_posebone(
 ):
     """
     Applies track transforms to PoseBone for every keyframe of animation.
-    :param context: Blender's Context.
     :param pose_bone: Target PoseBone.
     :param transforms: List of (Location, Rotation, Scaling) track transform tuples.
     :param ignore_origin_location: Whether to ignore location transforms from Origin track.
     :param frame_start: Start frame.
     """
-    matrix = pose_bone.bone.matrix_local
+    matrix_local = pose_bone.bone.matrix_local
     if pose_bone.parent:
-        matrix = pose_bone.parent.bone.matrix_local.inverted() @ matrix
-    loc, rot, _ = matrix.decompose()
+        matrix_local = pose_bone.parent.bone.matrix_local.inverted() @ matrix_local
     for i, transform in enumerate(transforms):
-        l, r, s = None, None, None
+        loc, rot, scale = matrix_local.decompose()
         if transform[0] is not None:
             if not ignore_origin_location or pose_bone.bone.name.casefold() != "Origin".casefold():
-                l = transform[0] - loc
+                loc = transform[0]
         if transform[1] is not None:
-            r = rot.conjugated() @ transform[1]
+            rot = transform[1]
+        matrix = Matrix.LocRotScale(loc, rot, scale)
+        if pose_bone.parent:
+            matrix = pose_bone.parent.matrix @ matrix
+        loc, rot, scale = Matrix.Identity(4).decompose()
         if transform[2] is not None:
-            s = Vector(transform[2])
-        if not set_posebone_transform(context, pose_bone, (l, r, s)):
-            continue
+            scale = transform[2]
+        matrix = matrix @ Matrix.LocRotScale(loc, rot, scale)
+        pose_bone.matrix = matrix
         current_frame = frame_start + i
-        if l is not None:
+        if transform[0] is not None:
             pose_bone.keyframe_insert(data_path="location", frame=current_frame)
-        if r is not None:
+        if transform[1] is not None:
             pose_bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame)
-        if s is not None:
+        if transform[2] is not None:
             pose_bone.keyframe_insert(data_path="scale", frame=current_frame)
-
-
-def set_posebone_transform(context: bpy.types.Context, pose_bone: bpy.types.PoseBone,
-                           transform: (Vector | None, Quaternion | None, Vector | None)) -> bool:
-    """
-    Applies transforms to PoseBone using Bone's use_local_location and view_layer's update.
-    :param context: Blender's Context.
-    :param pose_bone: Target PoseBone.
-    :param transform: (Location, Rotation, Scaling) tuple in armature space.
-    :return: True if any of 3 transforms was applied, false otherwise.
-    """
-    if transform[0] is None and transform[1] is None and transform[2] is None:
-        return False
-    if transform[0] is not None:
-        pose_bone.location = transform[0]
-    if transform[1] is not None:
-        pose_bone.rotation_quaternion = transform[1]
-    if transform[2] is not None:
-        pose_bone.scale = transform[2]
-    if not pose_bone.bone.use_local_location:
-        return True
-    pose_bone.bone.use_local_location = False
-    context.view_layer.update()
-    m = get_posebone_global_matrix(pose_bone)
-    pose_bone.bone.use_local_location = True
-    set_posebone_global_matrix(pose_bone, m)
-    return True
-
-
-def get_posebone_global_matrix(pose_bone: bpy.types.PoseBone) -> Matrix:
-    """
-    Returns global transform Matrix of PoseBone.
-    :param pose_bone: PoseBone.
-    :return: Global transform Matrix.
-    """
-    assert (pose_bone is not None), "Can't get global transform Matrix for None pose bone."
-    return pose_bone.id_data.matrix_world @ pose_bone.matrix
-
-
-def set_posebone_global_matrix(pose_bone: bpy.types.PoseBone, m: Matrix):
-    """
-    Applies global transform Matrix to PoseBone.
-    :param pose_bone: PoseBone.
-    :param m: Global transform Matrix.
-    """
-    assert (pose_bone is not None), "Can't set global transform Matrix for None pose bone."
-    pose_bone.matrix = pose_bone.id_data.matrix_world.inverted() @ m
 
 
 def get_track_transforms(track: VectorTrackType | RotationTrackType | None, key_frames: int) -> \
