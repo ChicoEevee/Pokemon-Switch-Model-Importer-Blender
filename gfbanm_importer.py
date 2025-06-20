@@ -12,6 +12,7 @@ from mathutils import Vector, Quaternion, Matrix
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
 # pylint: disable=wrong-import-position, import-error, too-many-arguments, too-many-branches
+# pylint: disable=too-many-positional-arguments
 
 from GFLib.Anim.DynamicRotationTrack import DynamicRotationTrackT
 from GFLib.Anim.DynamicVectorTrack import DynamicVectorTrackT
@@ -178,9 +179,9 @@ def get_track_transforms(track: VectorTrackType | RotationTrackType | None, key_
     transforms: list[TransformType] = [None] * key_frames
     if track is None or getattr(track, "co", None) is None:
         return transforms
+    previous_quat = None
     if isinstance(track, FixedVectorTrackT):
         transforms[0] = Vector((track.co.x, track.co.y, track.co.z))
-        transforms[-1] = transforms[0]
     elif isinstance(track, DynamicVectorTrackT):
         for i in range(min(len(track.co), key_frames)):
             transforms[i] = Vector((track.co[i].x, track.co[i].y, track.co[i].z))
@@ -189,16 +190,20 @@ def get_track_transforms(track: VectorTrackType | RotationTrackType | None, key_
             if -1 < track.frames[i] < key_frames:
                 transforms[track.frames[i]] = Vector((track.co[i].x, track.co[i].y, track.co[i].z))
     if isinstance(track, FixedRotationTrackT):
-        q = get_quaternion_from_packed(track.co)
-        transforms[0] = q
-        transforms[-1] = q
+        transforms[0] = get_quaternion_from_packed(track.co)
     elif isinstance(track, DynamicRotationTrackT):
         for i in range(min(len(track.co), key_frames)):
             transforms[i] = get_quaternion_from_packed(track.co[i])
+            if previous_quat is not None:
+                transforms[i].make_compatible(previous_quat)
+            previous_quat = transforms[i]
     elif isinstance(track, (Framed16RotationTrackT, Framed8RotationTrackT)):
         for i in range(min(len(track.co), len(track.frames))):
             if -1 < track.frames[i] < key_frames:
                 transforms[track.frames[i]] = get_quaternion_from_packed(track.co[i])
+                if previous_quat is not None:
+                    transforms[track.frames[i]].make_compatible(previous_quat)
+                previous_quat = transforms[track.frames[i]]
     return transforms
 
 
