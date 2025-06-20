@@ -1,13 +1,13 @@
 """
     Script for exporting armature animation to gfbanm/tranm format.
 """
+import math
 import os
 import sys
-import math
 
 import bpy
-from mathutils import Vector, Quaternion
 import flatbuffers
+from mathutils import Vector, Quaternion
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
@@ -136,49 +136,51 @@ def pack_quaternion_to_48bit(q: Quaternion) -> (int, int, int):
     return x, y, z
 
 
-def vector_list_to_vector_track(vector_list: list[Vector | None]) -> None | VectorTrackType | None:
+def round_float(f: float) -> float:
+    """
+    Rounds float number to 6 digits after the point and fixes negative zero.
+    :param f: Float number.
+    :return: Rounded float number.
+    """
+    return round(f, 6) + 0.0
+
+
+def get_rounded_vector(v: Vector) -> Vector:
+    """
+    Creates rounded Vector from another.
+    :param v: Vector.
+    :return: Rounded Vector.
+    """
+    return Vector((round_float(v[0]), round_float(v[1]), round_float(v[2])))
+
+
+def vector_list_to_vector_track(vector_list: list[Vector]) -> VectorTrackType | None:
     """
     Converts list of Vectors to appropriate VectorTrack.
     :param vector_list: List of Vectors
     :return: VectorTrack.
     """
-    val = None
-    for i, _ in enumerate(vector_list):
-        if vector_list[i] is not None:
-            vector_list[i][0] = round(vector_list[i][0], 6)
-            vector_list[i][1] = round(vector_list[i][1], 6)
-            vector_list[i][2] = round(vector_list[i][2], 6)
-            # Fix for negative zero appearing sometimes.
-            vector_list[i][0] += 0.0
-            vector_list[i][1] += 0.0
-            vector_list[i][2] += 0.0
-        if val is None:
-            val = vector_list[i]
-            continue
-        if vector_list[i] == val:
-            vector_list[i] = None
-        else:
-            val = vector_list[i]
-    indexes = [i for i, vector in enumerate(vector_list) if vector is not None]
+    has_value_list = []
+    previous_vector = None
+    for vector in vector_list:
+        has_value_list.append(previous_vector is None or previous_vector != vector)
+        previous_vector = vector
+    indexes = [i for i, has_value in enumerate(has_value_list) if has_value]
     if len(indexes) < 1:
         return None
     if len(indexes) == 1:
         track = FixedVectorTrackT()
-        vector = vector_list[indexes[0]]
-        val = vector[0], vector[1], vector[2]
         track.co = Vec3T()
-        track.co.x, track.co.y, track.co.z = val
+        val = get_rounded_vector(vector_list[indexes[0]])
+        track.co.x, track.co.y, track.co.z = val[0], val[1], val[2]
         return track
     if len(indexes) > 65535 or len(indexes) == len(vector_list):
         track = DynamicVectorTrackT()
         track.co = []
-        vector = vector_list[indexes[0]]
-        val = vector[0], vector[1], vector[2]
         for vector in vector_list:
-            if vector is not None:
-                val = vector[0], vector[1], vector[2]
             vec = Vec3T()
-            vec.x, vec.y, vec.z = val
+            val = get_rounded_vector(vector)
+            vec.x, vec.y, vec.z = val[0], val[1], val[2]
             track.co.append(vec)
         return track
     if len(indexes) < 256:
@@ -188,50 +190,42 @@ def vector_list_to_vector_track(vector_list: list[Vector | None]) -> None | Vect
     track.frames = []
     track.co = []
     for i in indexes:
-        vector = vector_list[i]
-        val = vector[0], vector[1], vector[2]
         track.frames.append(i)
         vec = Vec3T()
-        vec.x, vec.y, vec.z = val
+        val = get_rounded_vector(vector_list[i])
+        vec.x, vec.y, vec.z = val[0], val[1], val[2]
         track.co.append(vec)
     return track
 
 
-def quaternion_list_to_rotation_track(
-        quat_list: list[Quaternion | None]) -> RotationTrackType | None:
+def quaternion_list_to_rotation_track(quat_list: list[Quaternion]) -> RotationTrackType | None:
     """
     Converts list of Quaternions to appropriate RotationTrack.
     :param quat_list: List of Quaternions
     :return: RotationTrack.
     """
-    val = None
-    for i, _ in enumerate(quat_list):
-        if val is None:
-            val = quat_list[i]
-            continue
-        if quat_list[i] == val:
-            quat_list[i] = None
-        else:
-            val = quat_list[i]
-    indexes = [i for i, quat in enumerate(quat_list) if quat is not None]
+    has_value_list = []
+    previous_quat = None
+    for quat in quat_list:
+        if previous_quat is not None:
+            quat.make_compatible(previous_quat)
+        has_value_list.append(previous_quat is None or previous_quat != quat)
+        previous_quat = quat
+    indexes = [i for i, has_value in enumerate(has_value_list) if has_value]
     if len(indexes) < 1:
         return None
     if len(indexes) == 1:
         track = FixedRotationTrackT()
-        quat = quat_list[indexes[0]]
-        val = pack_quaternion_to_48bit(quat)
         track.co = sVec3T()
+        val = pack_quaternion_to_48bit(quat_list[indexes[0]])
         track.co.x, track.co.y, track.co.z = val
         return track
     if len(indexes) > 65535 or len(indexes) == len(quat_list):
         track = DynamicRotationTrackT()
         track.co = []
-        quat = quat_list[indexes[0]]
-        val = pack_quaternion_to_48bit(quat)
         for quat in quat_list:
-            if quat is not None:
-                val = pack_quaternion_to_48bit(quat)
             vec = sVec3T()
+            val = pack_quaternion_to_48bit(quat)
             vec.x, vec.y, vec.z = val
             track.co.append(vec)
         return track
@@ -242,10 +236,9 @@ def quaternion_list_to_rotation_track(
     track.frames = []
     track.co = []
     for i in indexes:
-        quat = quat_list[i]
-        val = pack_quaternion_to_48bit(quat)
         track.frames.append(i)
         vec = sVec3T()
+        val = pack_quaternion_to_48bit(quat_list[i])
         vec.x, vec.y, vec.z = val
         track.co.append(vec)
     return track
