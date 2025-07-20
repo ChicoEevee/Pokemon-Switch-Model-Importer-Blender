@@ -49,24 +49,24 @@ def import_animation(
     """
     if context.object is None or context.object.type != "ARMATURE":
         raise OSError("Target Armature not selected.")
-    print("Armature name: " + context.object.name + ".")
+    print(f"Armature name: {context.object.name}.")
     anim_name = os.path.splitext(os.path.basename(file_path))[0]
-    print("Animation name: " + anim_name + ".")
+    print(f"Animation name: {anim_name}.")
     with open(file_path, "rb") as file:
         anm = AnimationT.InitFromPackedBuf(bytearray(file.read()), 0)
         if anm.info is None:
-            raise OSError(file_path + " contains invalid info chunk.")
+            raise OSError(f"{file_path} contains invalid info chunk.")
         if anm.info.keyFrames < 1:
-            raise OSError(file_path + " contains invalid info.keyFrames chunk.")
-        print("Keyframes amount: " + str(anm.info.keyFrames) + ".")
+            raise OSError(f"{file_path} contains invalid info.keyFrames chunk.")
+        print(f"Keyframes amount: {anm.info.keyFrames}.")
         if anm.info.frameRate < 1:
-            raise OSError(file_path + " contains invalid info.frameRate chunk.")
-        print("Framerate: " + str(anm.info.frameRate) + " FPS.")
+            raise OSError(f"{file_path} contains invalid info.frameRate chunk.")
+        print(f"Framerate: {anm.info.frameRate} FPS.")
         if anm.skeleton is None:
-            raise OSError(file_path + " contains invalid skeleton chunk.")
+            raise OSError(f"{file_path} contains invalid skeleton chunk.")
         if anm.skeleton.tracks is None:
-            raise OSError(file_path + " contains invalid skeleton.tracks chunk.")
-        print("Tracks amount: " + str(len(anm.skeleton.tracks)) + ".")
+            raise OSError(f"{file_path} contains invalid skeleton.tracks chunk.")
+        print(f"Tracks amount: {len(anm.skeleton.tracks)}.")
         apply_animation_to_tracks(
             context,
             anim_name,
@@ -100,15 +100,18 @@ def apply_animation_to_tracks(
     assert (context.object is not None and context.object.type == "ARMATURE"), \
         "Selected object is not Armature."
     for pose_bone in context.object.pose.bones:
-        print("Clearing pose for " + pose_bone.name + " bone.")
+        print(f"Clearing pose for {pose_bone.name} bone.")
         pose_bone.matrix_basis = Matrix.Identity(4)
     context.view_layer.update()
     action = None
-    for track in tracks:
+    context.window_manager.progress_begin(0, len(tracks))
+    for i, track in enumerate(tracks):
         if track is None or track.name is None or track.name == "":
+            context.window_manager.progress_update(i + 1)
             continue
-        print("Creating keyframes for " + track.name + " track.")
+        print(f"Creating keyframes for {track.name} track.")
         if track.name not in context.object.pose.bones.keys():
+            context.window_manager.progress_update(i + 1)
             continue
         pose_bone = context.object.pose.bones[track.name]
         t_list = get_track_transforms(track.translate, key_frames)
@@ -124,6 +127,8 @@ def apply_animation_to_tracks(
             context.scene.render.fps_base = 1.0
         apply_track_transforms_to_posebone(pose_bone, list(zip(t_list, r_list, s_list)),
                                            ignore_origin_location, frame_start)
+        context.window_manager.progress_update(i + 1)
+    context.window_manager.progress_end()
     context.view_layer.update()
 
 
