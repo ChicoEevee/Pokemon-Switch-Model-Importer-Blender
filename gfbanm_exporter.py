@@ -61,7 +61,8 @@ def export_animation(context: bpy.types.Context, does_loop: bool,
     animation.skeleton = BoneAnimationT()
     animation.skeleton.tracks = []
     transforms = get_all_track_transforms(context, frame_range)
-    for bone_name in transforms:
+    context.window_manager.progress_begin(0, len(transforms))
+    for i, bone_name in enumerate(transforms):
         print(f"Exporting keyframes for {bone_name} track.")
         track = BoneTrackT()
         track.name = bone_name
@@ -72,6 +73,8 @@ def export_animation(context: bpy.types.Context, does_loop: bool,
         track.scale = vector_list_to_vector_track(transforms[bone_name][2])
         track.scaleType = vector_track_to_type(track.scale)
         animation.skeleton.tracks.append(track)
+        context.window_manager.progress_update(i + 1)
+    context.window_manager.progress_end()
     context.scene.frame_set(current_frame)
     builder = flatbuffers.Builder()
     animation = animation.Pack(builder)

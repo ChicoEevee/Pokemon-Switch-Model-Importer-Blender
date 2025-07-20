@@ -3,8 +3,8 @@
 """
 import os
 import sys
+import site
 import ensurepip
-import sysconfig
 import subprocess
 from importlib import import_module
 import bpy
@@ -47,7 +47,7 @@ class TRSKLExport(bpy.types.Operator, ExportHelper):
         armature_obj = context.active_object
         from .trskl_exporter import export_skeleton
         if armature_obj and armature_obj.type == "ARMATURE":
-            if not attempt_install_flatbuffers(self):
+            if not attempt_install_flatbuffers(self, context):
                 return {"CANCELLED"}
             data = export_skeleton(armature_obj)
             # Save the data to a TRSKL file
@@ -205,12 +205,12 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         self.layout.prop(self, "loadlods")
         self.layout.prop(self, "bonestructh")
 
-    def execute(self, _context: bpy.types.Context):
+    def execute(self, context: bpy.types.Context):
         """
         Executing import menu.
-        :param _context: Blender's context.
+        :param context: Blender's context.
         """
-        if not attempt_install_flatbuffers(self):
+        if not attempt_install_flatbuffers(self, context):
             return {"CANCELLED"}
         from .PokemonSwitch import from_trmdlsv
         directory = os.path.dirname(self.filepath)
@@ -257,7 +257,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         :param context: Blender's context.
         :return: Result.
         """
-        if not attempt_install_flatbuffers(self):
+        if not attempt_install_flatbuffers(self, context):
             return {"CANCELLED"}
         if context.active_object is None or context.active_object.type != "ARMATURE":
             self.report({"ERROR"}, "No Armature is selected for action import.")
@@ -431,7 +431,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         :param context: Blender's context.
         :return: Result.
         """
-        if not attempt_install_flatbuffers(self):
+        if not attempt_install_flatbuffers(self, context):
             return {"CANCELLED"}
         if context.active_object is None or context.active_object.type != "ARMATURE":
             self.report({"ERROR"}, "No Armature is selected for action export.")
@@ -531,31 +531,45 @@ def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
 
-def attempt_install_flatbuffers(operator: bpy.types.Operator = None) -> bool:
+def attempt_install_flatbuffers(operator: bpy.types.Operator, context: bpy.types.Context) -> bool:
     """
     Attempts installing flatbuffers library if it's not installed using pip.
     :return: True if flatbuffers was found or successfully installed, False otherwise.
     """
     if are_flatbuffers_installed():
         return True
+    modules_path = bpy.utils.user_resource("SCRIPTS", path="modules", create=True)
+    site.addsitedir(modules_path)
+    context.window_manager.progress_begin(0, 3)
     ensurepip.bootstrap()
+    context.window_manager.progress_update(1)
     subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
-    subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "flatbuffers"])
-    if are_flatbuffers_installed():
-        msg = "Successfully installed flatbuffers library."
+    context.window_manager.progress_update(2)
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "--target", modules_path,
+             "flatbuffers"])
+    except subprocess.SubprocessError as e:
+        context.window_manager.progress_update(3)
+        context.window_manager.progress_end()
+        msg = (f"Failed to install flatbuffers library using pip. {e}\n"
+               f"To use this addon, put Python flatbuffers library folder for your platform"
+               f"to this path: {modules_path}.")
         if operator is not None:
             operator.report({"INFO"}, msg)
         else:
             print(msg)
+        return False
+    context.window_manager.progress_update(3)
+    context.window_manager.progress_end()
+    if are_flatbuffers_installed():
+        msg = "Successfully installed flatbuffers library."
+        operator.report({"INFO"}, msg)
         return True
-    platlib_path = sysconfig.get_path("platlib")
-    msg = ("Failed to install flatbuffers library using pip. "
-           f"To use this addon, put Python flatbuffers library folder "
-           f"to this path: {platlib_path}.")
-    if operator is not None:
-        operator.report({"ERROR"}, msg)
-    else:
-        print(msg)
+    msg = ("Failed to install flatbuffers library using pip."
+           f"To use this addon, put Python flatbuffers library folder for your platform"
+           f"to this path: {modules_path}.")
+    operator.report({"ERROR"}, msg)
     return False
 
 

@@ -1,7 +1,7 @@
 # Pokémon Switch V3 Model Importer/Exporter Blender
 A Python script for Blender to import/export models from Pokémon Games on Nintendo Switch.
 
-Credits to Shararamosh for the work and letting me add the animation importer to this addon.
+Credits to [Shararamosh](https://github.com/Shararamosh) for the work and letting me add the animation importer to this addon.
 
 HUGE thanks to Random Talking Bush for making the original maxscript for this
 https://www.vg-resource.com/thread-29836.html
@@ -16,4 +16,4 @@ Unique Trainers (model_uq) https://drive.google.com/file/d/10BeIPdE5Yw_lJPHMLd00
 
 All Pokémon from SCVI https://drive.google.com/file/d/1N8NbyD1kh1LI6rSTbtG2wVdjQ47oJIAM/view?usp=sharing
 
-Blender script originally made/ported by @SomeKitten
+Blender script originally made/ported by [SomeKitten](https://github.com/SomeKitten)
