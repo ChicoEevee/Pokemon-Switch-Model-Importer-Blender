@@ -163,42 +163,37 @@ def vector_list_to_vector_track(vector_list: list[Vector]) -> VectorTrackType | 
     :param vector_list: List of Vectors
     :return: VectorTrack.
     """
-    has_value_list = []
-    previous_vector = None
-    for vector in vector_list:
-        has_value_list.append(previous_vector is None or previous_vector != vector)
-        previous_vector = vector
+    has_value_list = [i < 1 or vector_list[i] != vector_list[i - 1] or (
+            i < len(vector_list) - 1 and vector_list[i] != vector_list[i + 1]) for i in range(len(vector_list))]
     indexes = [i for i, has_value in enumerate(has_value_list) if has_value]
     if len(indexes) < 1:
         return None
     if len(indexes) == 1:
         track = FixedVectorTrackT()
-        track.co = Vec3T()
-        val = get_rounded_vector(vector_list[indexes[0]])
-        track.co.x, track.co.y, track.co.z = val[0], val[1], val[2]
+        track.co = vec3t_from_tuple(get_rounded_vector(vector_list[indexes[0]]).to_tuple())
         return track
     if len(indexes) > 65535 or len(indexes) == len(vector_list):
         track = DynamicVectorTrackT()
-        track.co = []
-        for vector in vector_list:
-            vec = Vec3T()
-            val = get_rounded_vector(vector)
-            vec.x, vec.y, vec.z = val[0], val[1], val[2]
-            track.co.append(vec)
+        track.co = [vec3t_from_tuple(get_rounded_vector(vector).to_tuple()) for vector in vector_list]
         return track
     if len(indexes) < 256:
         track = Framed8VectorTrackT()
     else:
         track = Framed16VectorTrackT()
-    track.frames = []
-    track.co = []
-    for i in indexes:
-        track.frames.append(i)
-        vec = Vec3T()
-        val = get_rounded_vector(vector_list[i])
-        vec.x, vec.y, vec.z = val[0], val[1], val[2]
-        track.co.append(vec)
+    track.frames = indexes.copy()
+    track.co = [vec3t_from_tuple(get_rounded_vector(vector_list[i]).to_tuple()) for i in indexes]
     return track
+
+
+def vec3t_from_tuple(t: (float, float, float)) -> Vec3T:
+    """
+    Creates Vec3T object from tuple.
+    :param t: Tuple of 3 floats.
+    :return: Vec3T.
+    """
+    vec = Vec3T()
+    vec.x, vec.y, vec.z = t
+    return vec
 
 
 def quaternion_list_to_rotation_track(quat_list: list[Quaternion]) -> RotationTrackType | None:
@@ -207,44 +202,40 @@ def quaternion_list_to_rotation_track(quat_list: list[Quaternion]) -> RotationTr
     :param quat_list: List of Quaternions
     :return: RotationTrack.
     """
-    has_value_list = []
-    previous_quat = None
-    for quat in quat_list:
-        if previous_quat is not None:
-            quat.make_compatible(previous_quat)
-        has_value_list.append(previous_quat is None or previous_quat != quat)
-        previous_quat = quat
+    for i in range(1, len(quat_list)):
+        quat_list[i].make_compatible(quat_list[i - 1])
+    has_value_list = [
+        i < 1 or quat_list[i] != quat_list[i - 1] or (i < len(quat_list) - 1 and quat_list[i] != quat_list[i + 1]) for i
+        in range(len(quat_list))]
     indexes = [i for i, has_value in enumerate(has_value_list) if has_value]
     if len(indexes) < 1:
         return None
     if len(indexes) == 1:
         track = FixedRotationTrackT()
-        track.co = sVec3T()
-        val = pack_quaternion_to_48bit(quat_list[indexes[0]])
-        track.co.x, track.co.y, track.co.z = val
+        track.co = svec3t_from_tuple(pack_quaternion_to_48bit(quat_list[indexes[0]]))
         return track
     if len(indexes) > 65535 or len(indexes) == len(quat_list):
         track = DynamicRotationTrackT()
-        track.co = []
-        for quat in quat_list:
-            vec = sVec3T()
-            val = pack_quaternion_to_48bit(quat)
-            vec.x, vec.y, vec.z = val
-            track.co.append(vec)
+        track.co = [svec3t_from_tuple(pack_quaternion_to_48bit(quat)) for quat in quat_list]
         return track
     if len(indexes) < 256:
         track = Framed8RotationTrackT()
     else:
         track = Framed16RotationTrackT()
-    track.frames = []
-    track.co = []
-    for i in indexes:
-        track.frames.append(i)
-        vec = sVec3T()
-        val = pack_quaternion_to_48bit(quat_list[i])
-        vec.x, vec.y, vec.z = val
-        track.co.append(vec)
+    track.frames = indexes.copy()
+    track.co = [svec3t_from_tuple(pack_quaternion_to_48bit(quat_list[i])) for i in indexes]
     return track
+
+
+def svec3t_from_tuple(t: (int, int, int)) -> sVec3T:
+    """
+    Creates sVec3T object from tuple.
+    :param t: Tuple of 3 integers.
+    :return: sVec3T.
+    """
+    vec = sVec3T()
+    vec.x, vec.y, vec.z = t
+    return vec
 
 
 def vector_track_to_type(track: VectorTrackType) -> int:
