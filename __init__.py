@@ -272,7 +272,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                                      context.scene.frame_start if self.use_scene_start
                                      else self.anim_offset)
                 except OSError as e:
-                    self.report({"INFO"}, f"Failed to import {file_path}. {str(e)}")
+                    self.report({"INFO"}, f"Failed to import {file_path}. {e}")
                 else:
                     b = True
                 finally:
@@ -285,7 +285,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                              context.scene.frame_start if self.use_scene_start
                              else self.anim_offset)
         except OSError as e:
-            self.report({"ERROR"}, f"Failed to import {self.filepath}. {str(e)}")
+            self.report({"ERROR"}, f"Failed to import {self.filepath}. {e}")
             return {"CANCELLED"}
         return {"FINISHED"}
 
@@ -335,7 +335,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
     """
     bl_idname = "export_scene.gfbanm"
     bl_label = "Export GFBANM/TRANM"
-    bl_description = "Export current action as Nintendo Switch Pokémon Animation file"
+    bl_description = "Export current Armature action as Nintendo Switch Pokémon Animation file"
     bl_options = {"PRESET", "UNDO"}
     filename_ext = ""
     filter_glob: StringProperty(default="*.gfbanm", options={"HIDDEN"})
@@ -344,10 +344,9 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
     export_format: EnumProperty(
         name="Format",
         items=(("GFBANM", "GFBANM (.gfbanm)",
-                "Exports action in format used by Pokémon Sword/Shield."),
+                "Exports action in format used by Pokémon Let's Go Pikachu/Eevee and Sword/Shield."),
                ("TRANM", "TRANM (.tranm)",
-                "Exports action in format used by Pokémon Legends: Arceus and "
-                "Pokémon Scarlet/Violet.")),
+                "Exports action in format used by Pokémon Legends: Arceus and Pokémon Scarlet/Violet.")),
         description="Output format for action",
         default=0,
         update=on_export_format_changed
@@ -486,7 +485,6 @@ def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
     Function that adds import operators.
     :param operator: Blender's operator.
     :param _context: Blender's Context.
-    :return:
     """
     operator.layout.menu(PokemonSwitchImportMenu.bl_idname)
 
@@ -496,7 +494,6 @@ def menu_func_export(operator: bpy.types.Operator, _context: bpy.types.Context):
     Function that adds export operators.
     :param operator: Blender's operator.
     :param _context: Blender's Context.
-    :return:
     """
     operator.layout.menu(PokemonSwitchExportMenu.bl_idname)
 
@@ -538,6 +535,10 @@ def attempt_install_flatbuffers(operator: bpy.types.Operator, context: bpy.types
     """
     if are_flatbuffers_installed():
         return True
+    if bpy.app.version >= (4, 2, 0) and not bpy.app.online_access:
+        msg = "Can't install flatbuffers library using pip - Internet access is not allowed."
+        operator.report({"INFO"}, msg)
+        return False
     modules_path = bpy.utils.user_resource("SCRIPTS", path="modules", create=True)
     site.addsitedir(modules_path)
     context.window_manager.progress_begin(0, 3)
@@ -555,10 +556,7 @@ def attempt_install_flatbuffers(operator: bpy.types.Operator, context: bpy.types
         msg = (f"Failed to install flatbuffers library using pip. {e}\n"
                f"To use this addon, put Python flatbuffers library folder for your platform"
                f"to this path: {modules_path}.")
-        if operator is not None:
-            operator.report({"INFO"}, msg)
-        else:
-            print(msg)
+        operator.report({"INFO"}, msg)
         return False
     context.window_manager.progress_update(3)
     context.window_manager.progress_end()

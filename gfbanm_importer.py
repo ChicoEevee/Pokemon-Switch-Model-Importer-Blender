@@ -148,6 +148,7 @@ def apply_track_transforms_to_posebone(
     matrix_local = pose_bone.bone.matrix_local
     if pose_bone.parent:
         matrix_local = pose_bone.parent.bone.matrix_local.inverted() @ matrix_local
+    previous_rot = None
     for i, transform in enumerate(transforms):
         loc, rot, scale = matrix_local.decompose()
         if transform[0] is not None:
@@ -162,6 +163,11 @@ def apply_track_transforms_to_posebone(
         if transform[2] is not None:
             scale = transform[2]
         matrix = matrix @ Matrix.LocRotScale(loc, rot, scale)
+        loc, rot, scale = matrix.decompose()
+        if previous_rot is not None:
+            rot.make_compatible(previous_rot)
+        previous_rot = rot
+        matrix = Matrix.LocRotScale(loc, rot, scale)
         pose_bone.matrix = matrix
         current_frame = frame_start + i
         if transform[0] is not None:
@@ -181,35 +187,24 @@ def get_track_transforms(track: VectorTrackType | RotationTrackType | None, key_
     :return: List of transforms as tuples (x, y, z) for Vectors or Quaternions for Rotations.
     """
     assert key_frames > 0, "Keyframes amount is less than 1."
-    transforms: list[TransformType] = [None] * key_frames
     if track is None or getattr(track, "co", None) is None:
-        return transforms
-    previous_quat = None
+        return [None] * key_frames
     if isinstance(track, FixedVectorTrackT):
-        transforms[0] = Vector((track.co.x, track.co.y, track.co.z))
-    elif isinstance(track, DynamicVectorTrackT):
-        for i in range(min(len(track.co), key_frames)):
-            transforms[i] = Vector((track.co[i].x, track.co[i].y, track.co[i].z))
-    elif isinstance(track, (Framed16VectorTrackT, Framed8VectorTrackT)):
-        for i in range(min(len(track.co), len(track.frames))):
-            if -1 < track.frames[i] < key_frames:
-                transforms[track.frames[i]] = Vector((track.co[i].x, track.co[i].y, track.co[i].z))
+        return [Vector((track.co.x, track.co.y, track.co.z)) if i == 0 else None for i in range(key_frames)]
+    if isinstance(track, DynamicVectorTrackT):
+        return [Vector((track.co[i].x, track.co[i].y, track.co[i].z)) if i < len(track.co) else None for i in
+                range(key_frames)]
+    if isinstance(track, (Framed16VectorTrackT, Framed8VectorTrackT)):
+        return [Vector((track.co[j].x, track.co[j].y, track.co[j].z)) if (j := list(track.frames).index(
+            i) if i in track.frames else -1) > -1 else None for i in range(key_frames)]
     if isinstance(track, FixedRotationTrackT):
-        transforms[0] = get_quaternion_from_packed(track.co)
-    elif isinstance(track, DynamicRotationTrackT):
-        for i in range(min(len(track.co), key_frames)):
-            transforms[i] = get_quaternion_from_packed(track.co[i])
-            if previous_quat is not None:
-                transforms[i].make_compatible(previous_quat)
-            previous_quat = transforms[i]
-    elif isinstance(track, (Framed16RotationTrackT, Framed8RotationTrackT)):
-        for i in range(min(len(track.co), len(track.frames))):
-            if -1 < track.frames[i] < key_frames:
-                transforms[track.frames[i]] = get_quaternion_from_packed(track.co[i])
-                if previous_quat is not None:
-                    transforms[track.frames[i]].make_compatible(previous_quat)
-                previous_quat = transforms[track.frames[i]]
-    return transforms
+        return [get_quaternion_from_packed(track.co) if i == 0 else None for i in range(key_frames)]
+    if isinstance(track, DynamicRotationTrackT):
+        return [get_quaternion_from_packed(track.co[i]) if i < len(track.co) else None for i in range(key_frames)]
+    if isinstance(track, (Framed16RotationTrackT, Framed8RotationTrackT)):
+        return [get_quaternion_from_packed(track.co[j]) if (j := list(track.frames).index(
+            i) if i in track.frames else -1) > -1 else None for i in range(key_frames)]
+    return [None] * key_frames
 
 
 SCALE = 0x7FFF
