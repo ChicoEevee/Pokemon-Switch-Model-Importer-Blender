@@ -915,12 +915,15 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
 
             if not 'ScViShader' in bpy.data.materials or not 'ScViShader' in bpy.data.materials:
                 try:
+                    shader_dir = os.path.join(addons_path, "addons")
+                    os.makedirs(shader_dir, exist_ok=True)
+                    blend_path = os.path.join(shader_dir, "SCVIShader.blend")
                     response = requests.get("https://raw.githubusercontent.com/ChicoEevee/Pokemon-Switch-V2-Model-Importer-Blender/master/SCVIShader.blend", stream=True)
-                    with open(os.path.join(addons_path,"addons/SCVIShader.blend"), 'wb') as file:
+                    with open(blend_path, 'wb') as file:
                         file.write(response.content)
                 except:
                     print("Offline Mode")
-                with bpy.data.libraries.load(os.path.join(addons_path,"addons/SCVIShader.blend"), link=False) as (data_from, data_to):
+                with bpy.data.libraries.load(blend_path, link=False) as (data_from, data_to):
                     data_to.materials = data_from.materials
                     print('! Loaded shader blend file.')
             for m, mat in enumerate(mat_data_array):
