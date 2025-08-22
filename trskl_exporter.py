@@ -17,24 +17,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 from Titan.Model import TRSKL, TransformNode, Transform, Bone, BoneMatrix, Vec3
 
 
-def is_bone_weighted(armature_obj: bpy.types.Object, bone_name: str):
-    """
-    Checks if bone is weighted to any mesh.
-    :param armature_obj: Armature object.
-    :param bone_name: Bone's name.
-    :returns: True if weighted, False otherwise.
-    """
-    for obj in bpy.data.objects:
-        if obj.type != "MESH":
-            continue
-        for modifier in obj.modifiers:
-            if modifier.type != "ARMATURE" or modifier.object != armature_obj:
-                continue
-            if bone_name in obj.vertex_groups:
-                return True
-    return False
-
-
 def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
     """
     Exports Armature object to TRSKL format.
@@ -50,28 +32,25 @@ def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
     trskl.iks = []
     # Assume the armature has only one pose for simplicity
     for bone in armature_obj.data.bones:
-        result = is_bone_weighted(armature_obj, bone.name)
         parent = bone.parent
         matrix = bone.matrix_local.inverted()
-        if result:
-            bone_obj = Bone.BoneT()
-            if hasattr(bone, "inherit_scale"):
-                if bone.inherit_scale not in ("FULL", "NONE", "NONE_LEGACY"):
-                    print(f"Bone {bone.name} has incompatible scale inheritance mode: "
-                          f"{bone.inherit_scale}. Full scale inheritance will be used "
-                          "instead.")
-                    bone_obj.inheritScale = False
-                else:
-                    bone_obj.inheritScale = bone.inherit_scale != "FULL"
+
+        bone_obj = Bone.BoneT()
+        if hasattr(bone, "inherit_scale"):
+            if bone.inherit_scale not in ("FULL", "NONE", "NONE_LEGACY"):
+                print(f"Bone {bone.name} has incompatible scale inheritance mode: "
+                      f"{bone.inherit_scale}. Full scale inheritance will be used "
+                      "instead.")
+                bone_obj.inheritScale = False
             else:
-                bone_obj.inheritScale = not bone.use_inherit_scale
-            bone_obj.influenceSkinning = True
-            bone_obj.matrix = create_bone_matrix(matrix)
-            bones.append(bone_obj)
-        if result:
-            bone_index = armature_obj.data.bones.find(bone.name)
+                bone_obj.inheritScale = bone.inherit_scale != "FULL"
         else:
-            bone_index = -1
+            bone_obj.inheritScale = not bone.use_inherit_scale
+        bone_obj.influenceSkinning = True   # always included
+        bone_obj.matrix = create_bone_matrix(matrix)
+        bones.append(bone_obj)
+
+        bone_index = armature_obj.data.bones.find(bone.name)
         # Get the parent index
         parent_index = -1  # Default value for bones without a parent
         if bone.parent:
