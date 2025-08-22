@@ -3,8 +3,8 @@
 """
 import os
 import sys
-import site
 import ensurepip
+import sysconfig
 import subprocess
 from importlib import import_module
 import bpy
@@ -47,7 +47,7 @@ class TRSKLExport(bpy.types.Operator, ExportHelper):
         armature_obj = context.active_object
         from .trskl_exporter import export_skeleton
         if armature_obj and armature_obj.type == "ARMATURE":
-            if not attempt_install_flatbuffers(self, context):
+            if not attempt_install_flatbuffers(self):
                 return {"CANCELLED"}
             data = export_skeleton(armature_obj)
             # Save the data to a TRSKL file
@@ -189,9 +189,9 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         description="Uses rare material instead of normal one",
         default=False
     )
-    bonestructh: BoolProperty(
-        name="Bone Extras (WIP)",
-        description="Bone Extras (WIP)",
+    laplayer: BoolProperty(
+        name="Player Model from Arceus",
+        description="Player Model from Arceus",
         default=False
     )
 
@@ -203,25 +203,25 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         self.layout.prop(self, "rare")
         self.layout.prop(self, "multiple")
         self.layout.prop(self, "loadlods")
-        self.layout.prop(self, "bonestructh")
+        self.layout.prop(self, "laplayer")
 
-    def execute(self, context: bpy.types.Context):
+    def execute(self, _context: bpy.types.Context):
         """
         Executing import menu.
-        :param context: Blender's context.
+        :param _context: Blender's context.
         """
-        if not attempt_install_flatbuffers(self, context):
+        if not attempt_install_flatbuffers(self):
             return {"CANCELLED"}
         from .PokemonSwitch import from_trmdlsv
         directory = os.path.dirname(self.filepath)
         if not self.multiple:
             filename = os.path.basename(self.filepath)
-            from_trmdlsv(directory, filename, self.rare, self.loadlods, self.bonestructh)
+            from_trmdlsv(directory, filename, self.rare, self.loadlods, self.laplayer)
             return {"FINISHED"}
         file_list = sorted(os.listdir(directory))
         obj_list = [item for item in file_list if item.endswith(".trmdl")]
         for item in obj_list:
-            from_trmdlsv(directory, item, self.rare, self.loadlods, self.bonestructh)
+            from_trmdlsv(directory, item, self.rare, self.loadlods, self.laplayer)
         return {"FINISHED"}
 
 
@@ -257,7 +257,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         :param context: Blender's context.
         :return: Result.
         """
-        if not attempt_install_flatbuffers(self, context):
+        if not attempt_install_flatbuffers(self):
             return {"CANCELLED"}
         if context.active_object is None or context.active_object.type != "ARMATURE":
             self.report({"ERROR"}, "No Armature is selected for action import.")
@@ -272,7 +272,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                                      context.scene.frame_start if self.use_scene_start
                                      else self.anim_offset)
                 except OSError as e:
-                    self.report({"INFO"}, f"Failed to import {file_path}. {e}")
+                    self.report({"INFO"}, f"Failed to import {file_path}. {str(e)}")
                 else:
                     b = True
                 finally:
@@ -285,7 +285,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                              context.scene.frame_start if self.use_scene_start
                              else self.anim_offset)
         except OSError as e:
-            self.report({"ERROR"}, f"Failed to import {self.filepath}. {e}")
+            self.report({"ERROR"}, f"Failed to import {self.filepath}. {str(e)}")
             return {"CANCELLED"}
         return {"FINISHED"}
 
@@ -335,7 +335,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
     """
     bl_idname = "export_scene.gfbanm"
     bl_label = "Export GFBANM/TRANM"
-    bl_description = "Export current Armature action as Nintendo Switch Pokémon Animation file"
+    bl_description = "Export current action as Nintendo Switch Pokémon Animation file"
     bl_options = {"PRESET", "UNDO"}
     filename_ext = ""
     filter_glob: StringProperty(default="*.gfbanm", options={"HIDDEN"})
@@ -344,9 +344,10 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
     export_format: EnumProperty(
         name="Format",
         items=(("GFBANM", "GFBANM (.gfbanm)",
-                "Exports action in format used by Pokémon Let's Go Pikachu/Eevee and Sword/Shield."),
+                "Exports action in format used by Pokémon Sword/Shield."),
                ("TRANM", "TRANM (.tranm)",
-                "Exports action in format used by Pokémon Legends: Arceus and Pokémon Scarlet/Violet.")),
+                "Exports action in format used by Pokémon Legends: Arceus and "
+                "Pokémon Scarlet/Violet.")),
         description="Output format for action",
         default=0,
         update=on_export_format_changed
@@ -430,7 +431,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         :param context: Blender's context.
         :return: Result.
         """
-        if not attempt_install_flatbuffers(self, context):
+        if not attempt_install_flatbuffers(self):
             return {"CANCELLED"}
         if context.active_object is None or context.active_object.type != "ARMATURE":
             self.report({"ERROR"}, "No Armature is selected for action export.")
@@ -485,6 +486,7 @@ def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
     Function that adds import operators.
     :param operator: Blender's operator.
     :param _context: Blender's Context.
+    :return:
     """
     operator.layout.menu(PokemonSwitchImportMenu.bl_idname)
 
@@ -494,6 +496,7 @@ def menu_func_export(operator: bpy.types.Operator, _context: bpy.types.Context):
     Function that adds export operators.
     :param operator: Blender's operator.
     :param _context: Blender's Context.
+    :return:
     """
     operator.layout.menu(PokemonSwitchExportMenu.bl_idname)
 
@@ -528,46 +531,31 @@ def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
 
-def attempt_install_flatbuffers(operator: bpy.types.Operator, context: bpy.types.Context) -> bool:
+def attempt_install_flatbuffers(operator: bpy.types.Operator = None) -> bool:
     """
     Attempts installing flatbuffers library if it's not installed using pip.
     :return: True if flatbuffers was found or successfully installed, False otherwise.
     """
     if are_flatbuffers_installed():
         return True
-    if bpy.app.version >= (4, 2, 0) and not bpy.app.online_access:
-        msg = "Can't install flatbuffers library using pip - Internet access is not allowed."
-        operator.report({"INFO"}, msg)
-        return False
-    modules_path = bpy.utils.user_resource("SCRIPTS", path="modules", create=True)
-    site.addsitedir(modules_path)
-    context.window_manager.progress_begin(0, 3)
     ensurepip.bootstrap()
-    context.window_manager.progress_update(1)
     subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
-    context.window_manager.progress_update(2)
-    try:
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "--upgrade", "--target", modules_path,
-             "flatbuffers"])
-    except subprocess.SubprocessError as e:
-        context.window_manager.progress_update(3)
-        context.window_manager.progress_end()
-        msg = (f"Failed to install flatbuffers library using pip. {e}\n"
-               f"To use this addon, put Python flatbuffers library folder for your platform"
-               f"to this path: {modules_path}.")
-        operator.report({"INFO"}, msg)
-        return False
-    context.window_manager.progress_update(3)
-    context.window_manager.progress_end()
+    subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "flatbuffers"])
     if are_flatbuffers_installed():
         msg = "Successfully installed flatbuffers library."
-        operator.report({"INFO"}, msg)
+        if operator is not None:
+            operator.report({"INFO"}, msg)
+        else:
+            print(msg)
         return True
-    msg = ("Failed to install flatbuffers library using pip."
-           f"To use this addon, put Python flatbuffers library folder for your platform"
-           f"to this path: {modules_path}.")
-    operator.report({"ERROR"}, msg)
+    platlib_path = sysconfig.get_path("platlib")
+    msg = ("Failed to install flatbuffers library using pip. "
+           f"To use this addon, put Python flatbuffers library folder "
+           f"to this path: {platlib_path}.")
+    if operator is not None:
+        operator.report({"ERROR"}, msg)
+    else:
+        print(msg)
     return False
 
 
