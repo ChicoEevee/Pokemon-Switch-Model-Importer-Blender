@@ -84,7 +84,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
     elif trmsh.startswith(('dm_')): chara_check = "CommonNPCLA"
     elif trmsh.startswith(('p1')): chara_check = "SVProtag"
     elif trmsh.startswith(('p2')): chara_check = "SVProtag"
-    elif trmsh.startswith(('pm')): chara_check = "Pokemon"
     elif trmsh.startswith(('p0')): chara_check = "SVProtag"
     else: chara_check = "None"
     
