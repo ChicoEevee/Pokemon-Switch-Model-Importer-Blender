@@ -1438,10 +1438,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                                 raise AssertionError("Unexpected UVs layer!")
                                         elif vert_buff_param_type == 0x07:
                                             if vert_buff_param_layer != 0:
-                                                raise AssertionError("Unexpected node IDs layer!")
+                                                raise AssertionError("Unexpected weights layer!")
 
-                                            if vert_buff_param_format != 0x16:
-                                                raise AssertionError("Unexpected node IDs format!")
+                                            if vert_buff_param_format == 0x16:
+                                                bones_fmt = "4Bytes"; vert_buffer_stride = vert_buffer_stride + 0x04
 
                                             bones_fmt = "4Bytes"; vert_buffer_stride = vert_buffer_stride + 0x04
                                         elif vert_buff_param_type == 0x08:
