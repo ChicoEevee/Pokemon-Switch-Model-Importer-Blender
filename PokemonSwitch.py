@@ -1166,15 +1166,14 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                     fseek(trmsh, mat_struct)
                                     mat_struct_len = readshort(trmsh)
 
-                                    if mat_struct_len == 0x000E:
-                                        mat_struct_section_len = readshort(trmsh)
-                                        mat_struct_ptr_facepoint_count = readshort(trmsh)
-                                        mat_struct_ptr_facepoint_start = readshort(trmsh)
-                                        mat_struct_ptr_unk_c = readshort(trmsh)
-                                        mat_struct_ptr_string = readshort(trmsh)
-                                        mat_struct_ptr_unk_d = readshort(trmsh)
-                                    else:
+                                    if mat_struct_len != 0x000E:
                                         raise AssertionError("Unexpected material struct length!")
+                                    mat_struct_section_len = readshort(trmsh)
+                                    mat_struct_ptr_facepoint_count = readshort(trmsh)
+                                    mat_struct_ptr_facepoint_start = readshort(trmsh)
+                                    mat_struct_ptr_unk_c = readshort(trmsh)
+                                    mat_struct_ptr_string = readshort(trmsh)
+                                    mat_struct_ptr_unk_d = readshort(trmsh)
 
                                     if mat_struct_ptr_facepoint_count != 0:
                                         fseek(trmsh, mat_entry_offset + mat_struct_ptr_facepoint_count)
@@ -1217,6 +1216,14 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                 poly_group_name_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, poly_group_name_offset)
                                 poly_group_name_len = readlong(trmsh)
                                 poly_group_name = readfixedstring(trmsh, poly_group_name_len)
+                                
+                            if poly_group_struct_ptr_group_name != 0:
+                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_group_name)
+                                group_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, group_name_header_offset)
+                                group_name_count = readlong(trmsh)
+                                for g in range(group_name_count):
+                                    group_name_offset = ftell(trmsh) + readlong(trmsh)
+                                    groupoffset_array.append(group_name_offset)
                                     
                             if poly_group_struct_ptr_vis_group_name != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_vis_group_name)
@@ -1250,18 +1257,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                     morph_name = readfixedstring (trmsh, morph_name_len)
                                     MorphName_array.append(morph_name)
                                     fseek (trmsh, morph_ret)
-
-
-                                
-                            if poly_group_struct_ptr_group_name != 0:
-                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_group_name)
-                                group_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, group_name_header_offset)
-                                group_name_count = readlong(trmsh)
-                                for g in range(group_name_count):
-                                    group_name_offset = ftell(trmsh) + readlong(trmsh)
-                                    groupoffset_array.append(group_name_offset)
-
-
                             if poly_group_struct_ptr_vert_buff != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_vert_buff)
                                 poly_group_vert_buff_offset = ftell(trmsh) + readlong(trmsh)
@@ -1273,13 +1268,12 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                 fseek(trmsh, vert_buff_struct)
                                 vert_buff_struct_len = readshort(trmsh)
 
-                                if vert_buff_struct_len == 0x0008:
-                                    vert_buff_struct_section_len = readshort(trmsh)
-                                    vert_buff_struct_ptr_param = readshort(trmsh)
-                                    vert_buff_struct_ptr_b = readshort(trmsh)
-                                else:
+                                if vert_buff_struct_len != 0x0008:
                                     raise AssertionError("Unexpected VertexBuffer struct length!")
-                                    
+                                vert_buff_struct_section_len = readshort(trmsh)
+                                vert_buff_struct_ptr_param = readshort(trmsh)
+                                vert_buff_struct_ptr_b = readshort(trmsh)
+
                                 if vert_buff_struct_ptr_param != 0:
                                     fseek(trmsh, vert_buff_offset + vert_buff_struct_ptr_param)
                                     vert_buff_param_offset = ftell(trmsh) + readlong(trmsh)
@@ -1444,6 +1438,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
 
                                             if vert_buff_param_format == 0x16:
                                                 bones_fmt = "4Bytes"; vert_buffer_stride = vert_buffer_stride + 0x04
+                                            if vert_buff_param_format == 0x34:
+                                                bones_fmt = "4UINTS32"; vert_buffer_stride = vert_buffer_stride + 0x10
                                         elif vert_buff_param_type == 0x08:
                                             if vert_buff_param_layer != 0:
                                                 raise AssertionError("Unexpected weights layer!")
@@ -1502,43 +1498,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                 vert_buffer_struct_ptr_groups = readshort(trmbf)
                             else:
                                 raise AssertionError("Unexpected vertex buffer struct length!")
-                                
-                            if vert_buffer_struct_ptr_faces != 0:
-                                fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
-                                face_buffer_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, face_buffer_start)
-                                face_buffer_count = readlong(trmbf)
-
-                                for y in range(face_buffer_count):
-                                    face_buff_offset = ftell(trmbf) + readlong(trmbf)
-                                    face_buff_ret = ftell(trmbf)
-                                    fseek(trmbf, face_buff_offset)
-                                    face_buff_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, face_buff_struct)
-                                    face_buff_struct_len = readshort(trmbf)
-
-                                    if face_buff_struct_len == 0x0006:
-                                        face_buffer_struct_section_length = readshort(trmbf)
-                                        face_buffer_struct_ptr = readshort(trmbf)
-                                    else:
-                                        raise AssertionError("Unexpected face buffer struct length!")
-
-                                    if face_buffer_struct_ptr != 0:
-                                        fseek(trmbf, face_buff_offset + face_buffer_struct_ptr)
-                                        facepoint_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, facepoint_start)
-                                        facepoint_byte_count = readlong(trmbf)
-                                        
-                                        if len(vert_array) > 65536:
-                                            for v in range(facepoint_byte_count // 12):
-                                                fa = readlong(trmbf)
-                                                fb = readlong(trmbf)
-                                                fc = readlong(trmbf)
-                                                face_array.append([fa, fb, fc])
-                                        else:
-                                            for v in range(facepoint_byte_count // 6):
-                                                fa = readshort(trmbf)
-                                                fb = readshort(trmbf)
-                                                fc = readshort(trmbf)
-                                                face_array.append([fa, fb, fc])
-                                    fseek(trmbf, face_buff_ret)
 
                             if vert_buffer_struct_ptr_verts != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_verts)
@@ -1556,11 +1515,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                     vert_buffer_sub_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_sub_struct)
                                     vert_buffer_sub_struct_len = readshort(trmbf)
 
-                                    if vert_buffer_sub_struct_len == 0x0006:
-                                        vert_buffer_sub_struct_section_length = readshort(trmbf)
-                                        vert_buffer_sub_struct_ptr = readshort(trmbf)
-                                    else:
+                                    if vert_buffer_sub_struct_len != 0x0006:
                                         raise AssertionError("Unexpected vertex buffer struct length!")
+                                    vert_buffer_sub_struct_section_length = readshort(trmbf)
+                                    vert_buffer_sub_struct_ptr = readshort(trmbf)
 
                                     if vert_buffer_sub_struct_ptr != 0:
                                         fseek(trmbf, vert_buffer_sub_offset + vert_buffer_sub_struct_ptr)
@@ -1730,6 +1688,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                                     bone2 = readbyte(trmbf)
                                                     bone3 = readbyte(trmbf)
                                                     bone4 = readbyte(trmbf)
+                                                elif poly_group_array[x]["bones_fmt"] == "4UINTS32":
+                                                    bone1 = readulong(trmbf)
+                                                    bone2 = readulong(trmbf)
+                                                    bone3 = readulong(trmbf)
+                                                    bone4 = readulong(trmbf)
                                                 else:
                                                     raise AssertionError("Unknown bones type!")
 
@@ -1793,6 +1756,41 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                             #TODO: Continue implementing after line 3814
                                     fseek(trmbf,vert_buffer_sub_ret)
 
+                            if vert_buffer_struct_ptr_faces != 0:
+                                fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
+                                face_buffer_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, face_buffer_start)
+                                face_buffer_count = readlong(trmbf)
+
+                                for y in range(face_buffer_count):
+                                    face_buff_offset = ftell(trmbf) + readlong(trmbf)
+                                    face_buff_ret = ftell(trmbf)
+                                    fseek(trmbf, face_buff_offset)
+                                    face_buff_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, face_buff_struct)
+                                    face_buff_struct_len = readshort(trmbf)
+
+                                    if face_buff_struct_len != 0x0006:
+                                        raise AssertionError("Unexpected face buffer struct length!")
+                                    face_buffer_struct_section_length = readshort(trmbf)
+                                    face_buffer_struct_ptr = readshort(trmbf)
+
+                                    if face_buffer_struct_ptr != 0:
+                                        fseek(trmbf, face_buff_offset + face_buffer_struct_ptr)
+                                        facepoint_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, facepoint_start)
+                                        facepoint_byte_count = readlong(trmbf)
+                                        
+                                        if len(vert_array) > 65536: # is this a typo? I would imagine it to be 65535
+                                            for v in range(facepoint_byte_count // 12):
+                                                fa = readlong(trmbf)
+                                                fb = readlong(trmbf)
+                                                fc = readlong(trmbf)
+                                                face_array.append([fa, fb, fc])
+                                        else:
+                                            for v in range(facepoint_byte_count // 6):
+                                                fa = readshort(trmbf)
+                                                fb = readshort(trmbf)
+                                                fc = readshort(trmbf)
+                                                face_array.append([fa, fb, fc])
+                                    fseek(trmbf, face_buff_ret)
 
                             if vert_buffer_struct_ptr_groups != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_groups)
@@ -2013,7 +2011,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
 
 
 
-
                                 for i, poly in enumerate(new_object.data.polygons):
                                     for x in range(len(mat_array)):
                                         if materials[face_mat_id_array[i]].name.split(".")[0] == sorted(mat_array)[x]:
@@ -2054,6 +2051,11 @@ def readlong(file):
     bytes_data = file.read(4)
     # print(f"readlong: {bytes_data}")
     return int.from_bytes(bytes_data, byteorder='little', signed=True)
+# USIGNED!!!!
+def readulong(file):
+    bytes_data = file.read(4)
+    # print(f"readlong: {bytes_data}")
+    return int.from_bytes(bytes_data, byteorder='little', signed=False)
 
 
 def readfloat(file):
