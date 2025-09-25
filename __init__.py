@@ -11,7 +11,14 @@ import bpy
 from bpy.props import *
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
+import struct
+import mathutils
+script_dir = os.path.dirname(__file__)
+if script_dir not in sys.path:
+    sys.path.append(script_dir)
 
+import TRINS
+import INS
 # pylint: disable=import-outside-toplevel, wrong-import-position, import-error
 # pylint: disable=too-few-public-methods
 
@@ -158,6 +165,98 @@ class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
                 print(f"TRMSH successfully exported to {file_path}.")
         return {"FINISHED"}
 
+
+class TRINSImport(bpy.types.Operator, ImportHelper):
+    """Import TRINS particle instance files"""
+    bl_idname = "import_scene.trins"
+    bl_label = "Import TRINS"
+    bl_options = {'UNDO'}
+
+    filename_ext = ".trins"
+    filter_glob: StringProperty(
+        default="*.trins",
+        options={'HIDDEN'}
+    )
+
+    multiple: BoolProperty(
+        name="Load All Folder",
+        description="Load all TRINS files in folder",
+        default=False
+    )
+
+    def draw(self, context):
+        self.layout.prop(self, "multiple")
+
+    def execute(self, context):
+        directory = os.path.dirname(self.filepath)
+
+        if not self.multiple:
+            filename = os.path.basename(self.filepath)
+            self.import_trins_file(directory, filename)
+            return {"FINISHED"}
+
+        # Load all TRINS files in folder
+        file_list = sorted(os.listdir(directory))
+        for item in file_list:
+            if item.endswith(".trins"):
+                self.import_trins_file(directory, item)
+
+        return {"FINISHED"}
+
+    def import_trins_file(self, directory, filename):
+        filepath = os.path.join(directory, filename)
+        with open(filepath, "rb") as f:
+            buf = f.read()
+
+        trins = TRINS.TRINS.GetRootAsTRINS(buf, 0)
+        ins_buf = trins.Buffer()
+        data_bytes = bytearray(ins_buf.DataAsNumpy())
+        instances_count = trins.InstanceCount()
+
+        root_name = os.path.splitext(filename)[0]
+        root_empty = bpy.data.objects.new(root_name, None)
+        bpy.context.collection.objects.link(root_empty)
+
+        for i in range(instances_count):
+            start = i * 16 * 4
+            end = start + 16 * 4
+            instances_bytes = data_bytes[start:end]
+            floats = struct.unpack('<16f', instances_bytes)
+
+            # Build 4x4 matrix
+            matrix = mathutils.Matrix([
+                floats[0:4],
+                floats[4:8],
+                floats[8:12],
+                floats[12:16]
+            ]).transposed()
+
+            loc, rot, scale = matrix.decompose()
+
+            # Create particle empty
+            instance_name = f"{root_name}_{i}"
+            empty = bpy.data.objects.new(instance_name, None)
+            bpy.context.collection.objects.link(empty)
+
+            # Parent to root
+            empty.parent = root_empty
+            empty.empty_display_size = 0.001
+            # Apply SRT
+            empty.location = loc
+            empty.rotation_mode = 'QUATERNION'
+            empty.rotation_quaternion = rot
+            empty.scale = scale
+
+        # --- Apply 90º X rotation to root ---
+        import math
+        root_empty.rotation_mode = 'XYZ'
+        root_empty.rotation_euler.x += math.radians(90)
+
+        # Apply the rotation (and scale, though scale is 1)
+        bpy.context.view_layer.objects.active = root_empty
+        root_empty.select_set(True)
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+        root_empty.select_set(False)
 
 class PokeSVImport(bpy.types.Operator, ImportHelper):
     """
@@ -460,6 +559,7 @@ class PokemonSwitchImportMenu(bpy.types.Menu):
         """
         self.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
         self.layout.operator(ImportGfbanm.bl_idname, text="Pokémon Animation (.gfbanm/.tranm)")
+        self.layout.operator(TRINSImport.bl_idname, text="Pokémon Map Instances (.trins)")
 
 
 class PokemonSwitchExportMenu(bpy.types.Menu):
@@ -508,6 +608,7 @@ def register():
     register_class(PokemonSwitchImportMenu)
     register_class(PokeSVImport)
     register_class(ImportGfbanm)
+    register_class(TRINSImport)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     register_class(PokemonSwitchExportMenu)
     register_class(TRSKLExport)
@@ -523,6 +624,7 @@ def unregister():
     unregister_class(PokemonSwitchImportMenu)
     unregister_class(PokeSVImport)
     unregister_class(ImportGfbanm)
+    unregister_class(TRINSImport)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     unregister_class(PokemonSwitchExportMenu)
     unregister_class(TRSKLExport)
