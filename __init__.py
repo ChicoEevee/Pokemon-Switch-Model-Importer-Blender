@@ -2,7 +2,11 @@
     Blender addon for importing and exporting assets from Nintendo Switch Pokémon games.
 """
 import os
+
 import sys
+script_dir = os.path.dirname(__file__)
+if script_dir not in sys.path:
+    sys.path.append(script_dir)
 import ensurepip
 import sysconfig
 import subprocess
@@ -13,12 +17,10 @@ from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 import struct
 import mathutils
-script_dir = os.path.dirname(__file__)
-if script_dir not in sys.path:
-    sys.path.append(script_dir)
-
+from Titan.TrinityScene import trinity_Scene, trinity_SceneObject, SceneEntry
 import TRINS
 import INS
+import math
 # pylint: disable=import-outside-toplevel, wrong-import-position, import-error
 # pylint: disable=too-few-public-methods
 
@@ -32,6 +34,98 @@ bl_info = {
     "category": "Import-Export",
     "doc_url": "https://github.com/ChicoEevee/Pokemon-Switch-Model-Importer-Blender"
 }
+
+class TRSCNImport(bpy.types.Operator, ImportHelper):
+    """Import TRSCN scene files"""
+    bl_idname = "import_scene.trscn"
+    bl_label = "Import TRSCN"
+    bl_options = {'UNDO'}
+
+    filename_ext = ".trscn"
+    filter_glob: StringProperty(
+        default="*.trscn",
+        options={'HIDDEN'}
+    )
+
+    multiple: BoolProperty(
+        name="Load All Folder + Subfolders",
+        description="Load all TRSCN files in folder",
+        default=False
+    )
+
+    def draw(self, context):
+        self.layout.prop(self, "multiple")
+
+    def execute(self, context):
+        directory = os.path.dirname(self.filepath)
+
+        if not self.multiple:
+            filename = os.path.basename(self.filepath)
+            self.import_trscn_file(directory, filename)
+            return {"FINISHED"}
+
+        # Load all TRSCN files in folder
+        for root, dirs, files in os.walk(directory):
+            for item in sorted(files):
+                if item.endswith(".trscn"):
+                    self.import_trscn_file(root, item)
+
+        return {"FINISHED"}
+
+    def import_trscn_file(self, directory, filename):
+        filepath = os.path.join(directory, filename)
+        with open(filepath, "rb") as f:
+            buf = f.read()
+
+        scene = trinity_Scene.trinity_Scene.GetRootAstrinity_Scene(buf, 0)
+
+        root_name = os.path.splitext(filename)[0]
+        root_empty = bpy.data.objects.new(root_name, None)
+        bpy.context.collection.objects.link(root_empty)
+
+        def parse_scene_entry(entry, parent_empty):
+            """Recursively add SceneEntry objects as empties"""
+            type_name = entry.TypeName()
+            type_name_str = type_name.decode("utf-8") if type_name else ""
+            obj_empty = None
+
+            if type_name_str == "trinity_SceneObject":
+                nested_bytes = entry.NestedTypeAsNumpy().tobytes()
+                obj = trinity_SceneObject.trinity_SceneObject.GetRootAstrinity_SceneObject(nested_bytes, 0)
+
+                # Build SRT
+                srt = obj.Srt()
+                scale = (srt.Scale().X(), srt.Scale().Y(), srt.Scale().Z())
+                rot = (srt.Rotation().X(), srt.Rotation().Y(), srt.Rotation().Z())
+                trans = (srt.Translation().X(), srt.Translation().Y(), srt.Translation().Z())
+
+                obj_name = obj.Name().decode("utf-8") if obj.Name() else "Object"
+                obj_name_full = f"{obj_name}_{entry.SubObjectsLength()}"
+
+                obj_empty = bpy.data.objects.new(obj_name_full, None)
+                bpy.context.collection.objects.link(obj_empty)
+                obj_empty.parent = parent_empty
+                obj_empty.location = trans
+                obj_empty.rotation_mode = 'XYZ'
+                obj_empty.rotation_euler = tuple(math.radians(r) for r in rot)
+                obj_empty.scale = scale
+
+            for i in range(entry.SubObjectsLength()):
+                parse_scene_entry(entry.SubObjects(i), obj_empty if obj_empty else parent_empty)
+
+        for i in range(scene.SceneObjectListLength()):
+            entry = scene.SceneObjectList(i)
+            parse_scene_entry(entry, root_empty)
+
+        root_empty.rotation_mode = 'XYZ'
+        root_empty.rotation_euler.x += math.radians(90)
+
+        bpy.context.view_layer.objects.active = root_empty
+        root_empty.select_set(True)
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+        root_empty.select_set(False)
+        if len(root_empty.children) == 0:
+            bpy.data.objects.remove(root_empty, do_unlink=True)
 
 
 class TRSKLExport(bpy.types.Operator, ExportHelper):
@@ -179,7 +273,7 @@ class TRINSImport(bpy.types.Operator, ImportHelper):
     )
 
     multiple: BoolProperty(
-        name="Load All Folder",
+        name="Load All Folder + Subfolders",
         description="Load all TRINS files in folder",
         default=False
     )
@@ -196,10 +290,10 @@ class TRINSImport(bpy.types.Operator, ImportHelper):
             return {"FINISHED"}
 
         # Load all TRINS files in folder
-        file_list = sorted(os.listdir(directory))
-        for item in file_list:
-            if item.endswith(".trins"):
-                self.import_trins_file(directory, item)
+        for root, dirs, files in os.walk(directory):
+            for item in sorted(files):
+                if item.endswith(".trins"):
+                    self.import_trins_file(root, item)
 
         return {"FINISHED"}
 
@@ -248,7 +342,7 @@ class TRINSImport(bpy.types.Operator, ImportHelper):
             empty.scale = scale
 
         # --- Apply 90º X rotation to root ---
-        import math
+        
         root_empty.rotation_mode = 'XYZ'
         root_empty.rotation_euler.x += math.radians(90)
 
@@ -560,6 +654,7 @@ class PokemonSwitchImportMenu(bpy.types.Menu):
         self.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
         self.layout.operator(ImportGfbanm.bl_idname, text="Pokémon Animation (.gfbanm/.tranm)")
         self.layout.operator(TRINSImport.bl_idname, text="Pokémon Map Instances (.trins)")
+        self.layout.operator(TRSCNImport.bl_idname, text="Pokémon Scene Object (.trscn)")
 
 
 class PokemonSwitchExportMenu(bpy.types.Menu):
@@ -608,6 +703,7 @@ def register():
     register_class(PokemonSwitchImportMenu)
     register_class(PokeSVImport)
     register_class(ImportGfbanm)
+    register_class(TRSCNImport)
     register_class(TRINSImport)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     register_class(PokemonSwitchExportMenu)
@@ -624,6 +720,7 @@ def unregister():
     unregister_class(PokemonSwitchImportMenu)
     unregister_class(PokeSVImport)
     unregister_class(ImportGfbanm)
+    unregister_class(TRSCNImport)
     unregister_class(TRINSImport)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     unregister_class(PokemonSwitchExportMenu)
