@@ -772,5 +772,17 @@ def attempt_install_flatbuffers(operator: bpy.types.Operator, context: bpy.types
     operator.report({"ERROR"}, msg)
     return False
 
+def are_flatbuffers_installed() -> bool:
+    """
+    Checks if flatbuffers library is installed.
+    :return: True or False.
+    """
+    try:
+        import_module("flatbuffers")
+    except ModuleNotFoundError:
+        return False
+    return True
+
+
 if __name__ == "__main__":
     register()
