@@ -148,7 +148,7 @@ class TRSKLExport(bpy.types.Operator, ExportHelper):
         armature_obj = context.active_object
         from .trskl_exporter import export_skeleton
         if armature_obj and armature_obj.type == "ARMATURE":
-            if not attempt_install_flatbuffers(self):
+            if not attempt_install_flatbuffers(self, context):
                 return {"CANCELLED"}
             data = export_skeleton(armature_obj)
             # Save the data to a TRSKL file
@@ -403,7 +403,7 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         Executing import menu.
         :param _context: Blender's context.
         """
-        if not attempt_install_flatbuffers(self):
+        if not attempt_install_flatbuffers(self, context):
             return {"CANCELLED"}
         from .PokemonSwitch import from_trmdlsv
         directory = os.path.dirname(self.filepath)
@@ -450,7 +450,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         :param context: Blender's context.
         :return: Result.
         """
-        if not attempt_install_flatbuffers(self):
+        if not attempt_install_flatbuffers(self, context):
             return {"CANCELLED"}
         if context.active_object is None or context.active_object.type != "ARMATURE":
             self.report({"ERROR"}, "No Armature is selected for action import.")
@@ -624,7 +624,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         :param context: Blender's context.
         :return: Result.
         """
-        if not attempt_install_flatbuffers(self):
+        if not attempt_install_flatbuffers(self, context):
             return {"CANCELLED"}
         if context.active_object is None or context.active_object.type != "ARMATURE":
             self.report({"ERROR"}, "No Armature is selected for action export.")
