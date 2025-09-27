@@ -210,10 +210,10 @@ class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
     use_skinning: BoolProperty(name="Use Skinning", default=True)
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 
-    def draw(self, _context: bpy.types.Context):
+    def draw(self, context: bpy.types.Context):
         """
         Drawing exporter's menu.
-        :param _context: Blender's context.
+        :param context: Blender's context.
         """
         self.layout.prop(self, "use_normal")
         self.layout.prop(self, "use_tangent")
@@ -223,10 +223,10 @@ class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
         self.layout.prop(self, "use_color")
         self.layout.prop(self, "color_count")
 
-    def execute(self, _context: bpy.types.Context):
+    def execute(self, context: bpy.types.Context):
         """
         Executing export menu.
-        :param _context: Blender's context.
+        :param context: Blender's context.
         """
         if not os.path.isfile(self.filepath):
             self.report({"ERROR"}, f"{os.path.basename(self.filepath)} is not a TRSKL file.")
@@ -388,20 +388,20 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         default=False
     )
 
-    def draw(self, _context: bpy.types.Context):
+    def draw(self, context: bpy.types.Context):
         """
         Drawing importer's menu.
-        :param _context: Blender's context.
+        :param context: Blender's context.
         """
         self.layout.prop(self, "rare")
         self.layout.prop(self, "multiple")
         self.layout.prop(self, "loadlods")
         self.layout.prop(self, "laplayer")
 
-    def execute(self, _context: bpy.types.Context):
+    def execute(self, context: bpy.types.Context):
         """
         Executing import menu.
-        :param _context: Blender's context.
+        :param context: Blender's context.
         """
         if not attempt_install_flatbuffers(self, context):
             return {"CANCELLED"}
@@ -482,10 +482,10 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
             return {"CANCELLED"}
         return {"FINISHED"}
 
-    def draw(self, _context: bpy.types.Context):
+    def draw(self, context: bpy.types.Context):
         """
         Drawing importer's menu.
-        :param _context: Blender's context.
+        :param context: Blender's context.
         """
         self.layout.prop(self, "ignore_origin_location")
         self.layout.prop(self, "use_scene_start")
@@ -581,10 +581,10 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
             return filepath + desired_ext
         return filepath
 
-    def check(self, _context: bpy.types.Context) -> bool:
+    def check(self, context: bpy.types.Context) -> bool:
         """
         Checks if operator needs to be updated.
-        :param _context: Blender's Context.
+        :param context: Blender's Context.
         :return: True if update is needed, False otherwise.
         """
         old_filepath = self.filepath
@@ -609,10 +609,10 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
 
-    def draw(self, _context: bpy.types.Context):
+    def draw(self, context: bpy.types.Context):
         """
         Drawing exporter's menu.
-        :param _context: Blender's context.
+        :param context: Blender's context.
         """
         self.layout.prop(self, "export_format")
         self.layout.prop(self, "does_loop")
@@ -646,10 +646,10 @@ class PokemonSwitchImportMenu(bpy.types.Menu):
     bl_idname = "import_pokemonswitch"
     bl_label = "Nintendo Switch Pokémon Assets"
 
-    def draw(self, _context: bpy.types.Context):
+    def draw(self, context: bpy.types.Context):
         """
         Drawing menu.
-        :param _context: Blender's context.
+        :param context: Blender's context.
         """
         self.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
         self.layout.operator(ImportGfbanm.bl_idname, text="Pokémon Animation (.gfbanm/.tranm)")
@@ -664,10 +664,10 @@ class PokemonSwitchExportMenu(bpy.types.Menu):
     bl_idname = "export_pokemonswitch"
     bl_label = "Nintendo Switch Pokémon Assets"
 
-    def draw(self, _context: bpy.types.Context):
+    def draw(self, context: bpy.types.Context):
         """
         Drawing menu.
-        :param _context: Blender's context.
+        :param context: Blender's context.
         """
         self.layout.operator(TRSKLExport.bl_idname, text="Pokémon Trinity Skeleton (.trskl)")
         self.layout.operator(ExportGfbanm.bl_idname,
@@ -676,21 +676,21 @@ class PokemonSwitchExportMenu(bpy.types.Menu):
                              text="Pokémon Trinity Mesh (.trmsh, .trmbf)")
 
 
-def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
+def menu_func_import(operator: bpy.types.Operator, context: bpy.types.Context):
     """
     Function that adds import operators.
     :param operator: Blender's operator.
-    :param _context: Blender's Context.
+    :param context: Blender's Context.
     :return:
     """
     operator.layout.menu(PokemonSwitchImportMenu.bl_idname)
 
 
-def menu_func_export(operator: bpy.types.Operator, _context: bpy.types.Context):
+def menu_func_export(operator: bpy.types.Operator, context: bpy.types.Context):
     """
     Function that adds export operators.
     :param operator: Blender's operator.
-    :param _context: Blender's Context.
+    :param context: Blender's Context.
     :return:
     """
     operator.layout.menu(PokemonSwitchExportMenu.bl_idname)
