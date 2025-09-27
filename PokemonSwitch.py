@@ -1957,7 +1957,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
 
                                     for face in new_object.data.polygons:
                                         for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                                            print(vert_idx, len(weight_array), weight_array[vert_idx])
                                             w = weight_array[vert_idx]
                                             for i in range(len(w["boneids"])):
                                                 try:
