@@ -221,7 +221,37 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                     "inherit_scale": bone.InheritScale(),
                     "influence_skinning": bone.InfluenceSkinning(),
                 })
-        
+    elif trskl is not None:
+        # Original single TRSKL parsing
+        with open(os.path.join(filep, trskl), "rb") as f:
+            buf = bytearray(f.read())
+        trskl_data = TRSKL.GetRootAsTRSKL(buf, 0)
+    
+        transform_nodes = []
+        for i in range(trskl_data.TransformNodesLength()):
+            node = trskl_data.TransformNodes(i)
+            transform_nodes.append({
+                "name": node.Name().decode('utf-8'),
+                "VecTranslateX": node.Transform().VecTranslate().X(),
+                "VecTranslateY": node.Transform().VecTranslate().Y(),
+                "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                "VecScaleX": node.Transform().VecScale().X(),
+                "VecScaleY": node.Transform().VecScale().Y(),
+                "VecScaleZ": node.Transform().VecScale().Z(),
+                "VecRotX": node.Transform().VecRot().X(),
+                "VecRotY": node.Transform().VecRot().Y(),
+                "VecRotZ": node.Transform().VecRot().Z(),
+                "parent_idx": node.ParentIdx() + 1,
+                "rig_idx": node.RigIdx(),
+            })
+    
+        bones = []
+        for i in range(trskl_data.BonesLength()):
+            bone = trskl_data.Bones(i)
+            bones.append({
+                "inherit_scale": bone.InheritScale(),
+                "influence_skinning": bone.InfluenceSkinning(),
+            })
 
             
         if IN_BLENDER_ENV:
@@ -1957,6 +1987,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
 
                                     for face in new_object.data.polygons:
                                         for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+                                            print(vert_idx, len(weight_array), weight_array[vert_idx])
                                             w = weight_array[vert_idx]
                                             for i in range(len(w["boneids"])):
                                                 try:
