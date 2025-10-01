@@ -18,8 +18,6 @@ from bpy_extras.io_utils import ImportHelper, ExportHelper
 import struct
 import mathutils
 from Titan.TrinityScene import trinity_Scene, trinity_SceneObject, SceneEntry
-import TRINS
-import INS
 import math
 # pylint: disable=import-outside-toplevel, wrong-import-position, import-error
 # pylint: disable=too-few-public-methods
@@ -57,6 +55,8 @@ class TRSCNImport(bpy.types.Operator, ImportHelper):
         self.layout.prop(self, "multiple")
 
     def execute(self, context):
+        if not attempt_install_flatbuffers(self, context):
+            return {"CANCELLED"}
         directory = os.path.dirname(self.filepath)
 
         if not self.multiple:
@@ -73,6 +73,8 @@ class TRSCNImport(bpy.types.Operator, ImportHelper):
         return {"FINISHED"}
 
     def import_trscn_file(self, directory, filename):
+        from Titan.TrinityScene import trinity_Scene, trinity_SceneObject, SceneEntry
+
         filepath = os.path.join(directory, filename)
         with open(filepath, "rb") as f:
             buf = f.read()
@@ -282,6 +284,8 @@ class TRINSImport(bpy.types.Operator, ImportHelper):
         self.layout.prop(self, "multiple")
 
     def execute(self, context):
+        if not attempt_install_flatbuffers(self, context):
+            return {"CANCELLED"}
         directory = os.path.dirname(self.filepath)
 
         if not self.multiple:
@@ -298,6 +302,7 @@ class TRINSImport(bpy.types.Operator, ImportHelper):
         return {"FINISHED"}
 
     def import_trins_file(self, directory, filename):
+        import INS
         filepath = os.path.join(directory, filename)
         with open(filepath, "rb") as f:
             buf = f.read()
