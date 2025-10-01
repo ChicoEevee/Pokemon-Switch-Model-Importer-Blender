@@ -25,7 +25,7 @@ bl_info = {
     "name": "Pokémon Switch V3 (TRMDL, GFBANM/TRANM, TRSKL, TRMBF+TRMSH)",
     "author": "SomeKitten, Shararamosh, Tavi, Luma, mv & ElChicoEevee",
     "version": (3, 0, 0),
-    "blender": (3, 3, 0),
+    "blender": (3, 6, 0),
     "location": "File > Import",
     "description": "Blender addon for importing and exporting Nintendo Switch Pokémon Assets.",
     "category": "Import-Export",
