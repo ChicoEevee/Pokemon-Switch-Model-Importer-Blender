@@ -17,7 +17,6 @@ from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 import struct
 import mathutils
-from Titan.TrinityScene import trinity_Scene, trinity_SceneObject, SceneEntry
 import math
 # pylint: disable=import-outside-toplevel, wrong-import-position, import-error
 # pylint: disable=too-few-public-methods
