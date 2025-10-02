@@ -18,6 +18,7 @@ from bpy_extras.io_utils import ImportHelper, ExportHelper
 import struct
 import mathutils
 import math
+import site
 # pylint: disable=import-outside-toplevel, wrong-import-position, import-error
 # pylint: disable=too-few-public-methods
 
