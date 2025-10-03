@@ -33,6 +33,34 @@ bl_info = {
     "doc_url": "https://github.com/ChicoEevee/Pokemon-Switch-Model-Importer-Blender"
 }
 
+
+## With the help of https://github.com/Reisyukaku/GFBMDL_Plugin/blob/master/io_gfbmdl/import_model.py and with permission of the creator
+class ImportGfmdl( bpy.types.Operator ):
+    bl_idname = "import.gfmdl"
+    bl_label = "Import GFMDL NO TEXTURES (*.gfbmdl) SWSH & Lets GO"
+    
+    filepath : StringProperty(
+            subtype = 'FILE_PATH',
+            )
+    filter_glob : StringProperty(
+            default = "*.gfbmdl",
+            options = {'HIDDEN'},
+            )
+    files : bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement, options={'HIDDEN', 'SKIP_SAVE'})
+    directory : bpy.props.StringProperty(subtype='FILE_PATH', options={'HIDDEN', 'SKIP_SAVE'})
+    
+    def invoke(self, context, event):
+        if not self.filepath:
+            self.filepath = bpy.path.ensure_ext(bpy.data.filepath, ".gfbmdl")
+        WindowManager = context.window_manager
+        WindowManager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+    
+    def execute( self, context ):
+        from .gfbmdl_import import ImportModel
+        return ImportModel.load( self, context )
+
+
 class TRSCNImport(bpy.types.Operator, ImportHelper):
     """Import TRSCN scene files"""
     bl_idname = "import_scene.trscn"
@@ -656,6 +684,8 @@ class PokemonSwitchImportMenu(bpy.types.Menu):
         Drawing menu.
         :param context: Blender's context.
         """
+        
+        self.layout.operator(ImportGfmdl.bl_idname, text="SWSH and Lets GO Models (.gfbmdl) NO TEXTURES FOR NOW REQUIRES TO BE MANUAL!!!")
         self.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
         self.layout.operator(ImportGfbanm.bl_idname, text="Pokémon Animation (.gfbanm/.tranm)")
         self.layout.operator(TRINSImport.bl_idname, text="Pokémon Map Instances (.trins)")
@@ -707,6 +737,7 @@ def register():
     """
     register_class(PokemonSwitchImportMenu)
     register_class(PokeSVImport)
+    register_class(ImportGfmdl)
     register_class(ImportGfbanm)
     register_class(TRSCNImport)
     register_class(TRINSImport)
@@ -724,6 +755,7 @@ def unregister():
     """
     unregister_class(PokemonSwitchImportMenu)
     unregister_class(PokeSVImport)
+    unregister_class(ImportGfmdl)
     unregister_class(ImportGfbanm)
     unregister_class(TRSCNImport)
     unregister_class(TRINSImport)
