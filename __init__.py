@@ -57,6 +57,8 @@ class ImportGfmdl( bpy.types.Operator ):
         return {'RUNNING_MODAL'}
     
     def execute( self, context ):
+        if not attempt_install_flatbuffers(self, context):
+            return {"CANCELLED"}
         from .gfbmdl_import import ImportModel
         return ImportModel.load( self, context )
 
