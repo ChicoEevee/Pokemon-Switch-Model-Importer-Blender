@@ -40,6 +40,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
 
     textureextension = ".png"
 
+        
+    transform_nodes = []
+    bones = []
     trsklmapped = []
     materials = []
     bone_structure = None
@@ -87,79 +90,33 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
     elif trmsh.startswith(('p0')): chara_check = "SVProtag"
     else: chara_check = None
     
-    if chara_check is not None:
-        if chara_check != "None":
-            if chara_check == "SVProtag":
-                if laplayer == True:
-                    player_base_trskl_path = "../../../../p2/model/base/p2_base0001_00_default/p2_base0001_00_default.trskl"
-                else:
+    try:
+        if chara_check is not None:
+            if chara_check != "None":
+                if chara_check == "SVProtag":
                     player_base_trskl_path = "../../model_pc_base/model/p0_base.trskl"
-            elif chara_check == "CommonNPCLA":
-                player_base_trskl_path = "../../base/cc_base0001_00_young_m/cc_base0001_00_young_m.trskl"
-            with open(os.path.join(filep, player_base_trskl_path), "rb") as f:
-                buf = bytearray(f.read())
-            base_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
-
-            base_transform_nodes = []
-            base_name_to_idx = {}
-            for i in range(base_trskl.TransformNodesLength()):
-                node = base_trskl.TransformNodes(i)
-                name = node.Name().decode('utf-8')
-                base_name_to_idx[name] = len(base_transform_nodes)
-                base_transform_nodes.append({
-                    "name": name,
-                    "VecTranslateX": node.Transform().VecTranslate().X(),
-                    "VecTranslateY": node.Transform().VecTranslate().Y(),
-                    "VecTranslateZ": node.Transform().VecTranslate().Z(),
-                    "VecScaleX": node.Transform().VecScale().X(),
-                    "VecScaleY": node.Transform().VecScale().Y(),
-                    "VecScaleZ": node.Transform().VecScale().Z(),
-                    "VecRotX": node.Transform().VecRot().X(),
-                    "VecRotY": node.Transform().VecRot().Y(),
-                    "VecRotZ": node.Transform().VecRot().Z(),
-                    "parent_idx": node.ParentIdx() + 1,
-                    "rig_idx": node.RigIdx(),
-                    "effect_node": node.EffectNode()
-                })
-
-            base_bones = [
-                {
-                    "inherit_scale": bone.InheritScale(),
-                    "influence_skinning": bone.InfluenceSkinning()
-                }
-                for bone in (base_trskl.Bones(i) for i in range(base_trskl.BonesLength()))
-            ]
-            if trskl is not None:
-                # --- Load extra TRSKL ---
-                with open(os.path.join(filep, trskl), "rb") as f:
-                    buf = bytearray(f.read())
-                extra_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
-    
-                rig_offset = extra_trskl.RigOffset()
-                base_transform_count = len(base_transform_nodes)
-    
-                extra_transform_nodes = []
-                for i in range(extra_trskl.TransformNodesLength()):
-                    node = extra_trskl.TransformNodes(i)
-                    name = node.Name().decode('utf-8')
-                    rig_idx = node.RigIdx() + rig_offset
-                    parent_idx = node.ParentIdx()
-                    effect_node_name = node.EffectNode()
-                    
-                    if effect_node_name:
-                        effect_node_name = effect_node_name.decode('utf-8')
-                        if effect_node_name in base_name_to_idx:
-                            print(effect_node_name)
-                            # Remove +1 here to match JSON merging
-                            parent_idx = base_name_to_idx[effect_node_name]
-                        else:
-                            raise ValueError(f"Effect node '{effect_node_name}' not found in base skeleton.")
+                    full_path = os.path.join(filep, player_base_trskl_path)
+                    if os.path.exists(full_path):
+                        print(player_base_trskl_path, "exists")
                     else:
-                        parent_idx += rig_offset + 2
-                        if name == "side_hair_02":
-                            print(parent_idx)
-                    
-                    extra_transform_nodes.append({
+                        player_base_trskl_path = "../../../../p2/model/base/p2_base0001_00_default/p2_base0001_00_default.trskl"
+                        full_path = os.path.join(filep, player_base_trskl_path)
+                        if os.path.exists(full_path):
+                            print(player_base_trskl_path, "exists")
+                        else:
+                            player_base_trskl_path = "../../p2/p2_base0001_00_default/p2_base0001_00_default.trskl"
+                elif chara_check == "CommonNPCLA":
+                    player_base_trskl_path = "../../base/cc_base0001_00_young_m/cc_base0001_00_young_m.trskl"
+                with open(os.path.join(filep, player_base_trskl_path), "rb") as f:
+                    buf = bytearray(f.read())
+                base_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
+                base_transform_nodes = []
+                base_name_to_idx = {}
+                for i in range(base_trskl.TransformNodesLength()):
+                    node = base_trskl.TransformNodes(i)
+                    name = node.Name().decode('utf-8')
+                    base_name_to_idx[name] = len(base_transform_nodes)
+                    base_transform_nodes.append({
                         "name": name,
                         "VecTranslateX": node.Transform().VecTranslate().X(),
                         "VecTranslateY": node.Transform().VecTranslate().Y(),
@@ -170,33 +127,115 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                         "VecRotX": node.Transform().VecRot().X(),
                         "VecRotY": node.Transform().VecRot().Y(),
                         "VecRotZ": node.Transform().VecRot().Z(),
-                        "parent_idx": parent_idx + 1,
-                        "rig_idx": rig_idx,
-                        "effect_node": effect_node_name
+                        "parent_idx": node.ParentIdx() + 1,
+                        "rig_idx": node.RigIdx(),
+                        "effect_node": node.EffectNode()
                     })
     
-                extra_bones = [
+                base_bones = [
                     {
                         "inherit_scale": bone.InheritScale(),
                         "influence_skinning": bone.InfluenceSkinning()
                     }
-                    for bone in (extra_trskl.Bones(i) for i in range(extra_trskl.BonesLength()))
+                    for bone in (base_trskl.Bones(i) for i in range(base_trskl.BonesLength()))
                 ]
-    
-                # --- Merge ---
-                transform_nodes = base_transform_nodes + extra_transform_nodes
-                bones = base_bones + extra_bones
-            else:
                 transform_nodes = base_transform_nodes
                 bones = base_bones
+                if trskl is not None:
+                    # --- Load extra TRSKL ---
+                    with open(os.path.join(filep, trskl), "rb") as f:
+                        buf = bytearray(f.read())
+                    extra_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
+        
+                    rig_offset = extra_trskl.RigOffset()
+                    base_transform_count = len(base_transform_nodes)
+        
+                    extra_transform_nodes = []
+                    for i in range(extra_trskl.TransformNodesLength()):
+                        node = extra_trskl.TransformNodes(i)
+                        name = node.Name().decode('utf-8')
+                        rig_idx = node.RigIdx() + rig_offset
+                        parent_idx = node.ParentIdx()
+                        effect_node_name = node.EffectNode()
+                        
+                        if effect_node_name:
+                            effect_node_name = effect_node_name.decode('utf-8')
+                            if effect_node_name in base_name_to_idx:
+                                print(effect_node_name)
+                                # Remove +1 here to match JSON merging
+                                parent_idx = base_name_to_idx[effect_node_name]
+                            else:
+                                raise ValueError(f"Effect node '{effect_node_name}' not found in base skeleton.")
+                        else:
+                            parent_idx += rig_offset + 2
+                            if name == "side_hair_02":
+                                print(parent_idx)
+                        
+                        extra_transform_nodes.append({
+                            "name": name,
+                            "VecTranslateX": node.Transform().VecTranslate().X(),
+                            "VecTranslateY": node.Transform().VecTranslate().Y(),
+                            "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                            "VecScaleX": node.Transform().VecScale().X(),
+                            "VecScaleY": node.Transform().VecScale().Y(),
+                            "VecScaleZ": node.Transform().VecScale().Z(),
+                            "VecRotX": node.Transform().VecRot().X(),
+                            "VecRotY": node.Transform().VecRot().Y(),
+                            "VecRotZ": node.Transform().VecRot().Z(),
+                            "parent_idx": parent_idx + 1,
+                            "rig_idx": rig_idx,
+                            "effect_node": effect_node_name
+                        })
+        
+                    extra_bones = [
+                        {
+                            "inherit_scale": bone.InheritScale(),
+                            "influence_skinning": bone.InfluenceSkinning()
+                        }
+                        for bone in (extra_trskl.Bones(i) for i in range(extra_trskl.BonesLength()))
+                    ]
+        
+                    # --- Merge ---
+                    transform_nodes = base_transform_nodes + extra_transform_nodes
+                    bones = base_bones + extra_bones
 
-        else:
+            else:
+                # Original single TRSKL parsing
+                with open(os.path.join(filep, trskl), "rb") as f:
+                    buf = bytearray(f.read())
+                trskl_data = TRSKL.GetRootAsTRSKL(buf, 0)
+    
+                transform_nodes = []
+                for i in range(trskl_data.TransformNodesLength()):
+                    node = trskl_data.TransformNodes(i)
+                    transform_nodes.append({
+                        "name": node.Name().decode('utf-8'),
+                        "VecTranslateX": node.Transform().VecTranslate().X(),
+                        "VecTranslateY": node.Transform().VecTranslate().Y(),
+                        "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                        "VecScaleX": node.Transform().VecScale().X(),
+                        "VecScaleY": node.Transform().VecScale().Y(),
+                        "VecScaleZ": node.Transform().VecScale().Z(),
+                        "VecRotX": node.Transform().VecRot().X(),
+                        "VecRotY": node.Transform().VecRot().Y(),
+                        "VecRotZ": node.Transform().VecRot().Z(),
+                        "parent_idx": node.ParentIdx() + 1,
+                        "rig_idx": node.RigIdx(),
+                    })
+    
+                bones = []
+                for i in range(trskl_data.BonesLength()):
+                    bone = trskl_data.Bones(i)
+                    bones.append({
+                        "inherit_scale": bone.InheritScale(),
+                        "influence_skinning": bone.InfluenceSkinning(),
+                    })
+        elif trskl is not None:
             # Original single TRSKL parsing
             with open(os.path.join(filep, trskl), "rb") as f:
                 buf = bytearray(f.read())
             trskl_data = TRSKL.GetRootAsTRSKL(buf, 0)
-
-            transform_nodes = []
+        
             for i in range(trskl_data.TransformNodesLength()):
                 node = trskl_data.TransformNodes(i)
                 transform_nodes.append({
@@ -213,47 +252,14 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                     "parent_idx": node.ParentIdx() + 1,
                     "rig_idx": node.RigIdx(),
                 })
-
-            bones = []
             for i in range(trskl_data.BonesLength()):
                 bone = trskl_data.Bones(i)
                 bones.append({
                     "inherit_scale": bone.InheritScale(),
                     "influence_skinning": bone.InfluenceSkinning(),
                 })
-    elif trskl is not None:
-        # Original single TRSKL parsing
-        with open(os.path.join(filep, trskl), "rb") as f:
-            buf = bytearray(f.read())
-        trskl_data = TRSKL.GetRootAsTRSKL(buf, 0)
     
-        transform_nodes = []
-        for i in range(trskl_data.TransformNodesLength()):
-            node = trskl_data.TransformNodes(i)
-            transform_nodes.append({
-                "name": node.Name().decode('utf-8'),
-                "VecTranslateX": node.Transform().VecTranslate().X(),
-                "VecTranslateY": node.Transform().VecTranslate().Y(),
-                "VecTranslateZ": node.Transform().VecTranslate().Z(),
-                "VecScaleX": node.Transform().VecScale().X(),
-                "VecScaleY": node.Transform().VecScale().Y(),
-                "VecScaleZ": node.Transform().VecScale().Z(),
-                "VecRotX": node.Transform().VecRot().X(),
-                "VecRotY": node.Transform().VecRot().Y(),
-                "VecRotZ": node.Transform().VecRot().Z(),
-                "parent_idx": node.ParentIdx() + 1,
-                "rig_idx": node.RigIdx(),
-            })
-    
-        bones = []
-        for i in range(trskl_data.BonesLength()):
-            bone = trskl_data.Bones(i)
-            bones.append({
-                "inherit_scale": bone.InheritScale(),
-                "influence_skinning": bone.InfluenceSkinning(),
-            })
-
-            
+                
         if IN_BLENDER_ENV:
             new_armature = bpy.data.armatures.new(trmdlname[:-6])
             bone_structure = bpy.data.objects.new(trmdlname[:-6], new_armature)
@@ -298,6 +304,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
             bone_array.append(new_bone)
         if IN_BLENDER_ENV:
             bpy.ops.object.editmode_toggle()
+    except:
+        print("failed loading trskl")
+        
     if trmtr is not None:
         print("Parsing TRMTR...")
         trmtr_file_start = readlong(trmtr)
