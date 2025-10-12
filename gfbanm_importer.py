@@ -38,7 +38,8 @@ def import_animation(
         context: bpy.types.Context,
         file_path: str,
         ignore_origin_location: bool,
-        frame_start: float
+        frame_start: float,
+        frame_end: bool
 ):
     """
     Imports animation from processing gfbanm file.
@@ -58,6 +59,8 @@ def import_animation(
             raise OSError(f"{file_path} contains invalid info chunk.")
         if anm.info.keyFrames < 1:
             raise OSError(f"{file_path} contains invalid info.keyFrames chunk.")
+        if frame_end == True:
+            bpy.context.scene.frame_end = anm.info.keyFrames
         print(f"Keyframes amount: {anm.info.keyFrames}.")
         if anm.info.frameRate < 1:
             raise OSError(f"{file_path} contains invalid info.frameRate chunk.")
