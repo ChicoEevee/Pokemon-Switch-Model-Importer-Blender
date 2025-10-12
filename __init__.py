@@ -409,17 +409,17 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
     )
     multiple: BoolProperty(
         name="Load All Folder",
-        description="Uses rare material instead of normal one",
+        description="Loads all TRMDL in a folder.",
+        default=False
+    )
+    multiplesubs: BoolProperty(
+        name="Load All Folder + SubFolders.",
+        description="Loads all TRMDL in a entire directory and subfolders.",
         default=False
     )
     loadlods: BoolProperty(
         name="Load LODs",
-        description="Uses rare material instead of normal one",
-        default=False
-    )
-    laplayer: BoolProperty(
-        name="Player Model from Arceus",
-        description="Player Model from Arceus",
+        description="Loads the LODs the model has.",
         default=False
     )
 
@@ -430,8 +430,8 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         """
         self.layout.prop(self, "rare")
         self.layout.prop(self, "multiple")
+        self.layout.prop(self, "multiplesubs")
         self.layout.prop(self, "loadlods")
-        self.layout.prop(self, "laplayer")
 
     def execute(self, context: bpy.types.Context):
         """
@@ -442,14 +442,24 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
             return {"CANCELLED"}
         from .PokemonSwitch import from_trmdlsv
         directory = os.path.dirname(self.filepath)
-        if not self.multiple:
+        if self.multiplesubs:
+            trmdl_files = []
+            for root, dirs, files in os.walk(directory):
+                for item in files:
+                    if item.endswith(".trmdl"):
+                        trmdl_files.append((root, item))
+            trmdl_files.sort(key=lambda x: os.path.join(x[0], x[1]))
+            for root, item in trmdl_files:
+                from_trmdlsv(root, item, self.rare, self.loadlods)
+        elif self.multiple:
+            file_list = sorted(os.listdir(directory))
+            obj_list = [item for item in file_list if item.endswith(".trmdl")]
+            for item in obj_list:
+                from_trmdlsv(directory, item, self.rare, self.loadlods)
+        else:
             filename = os.path.basename(self.filepath)
-            from_trmdlsv(directory, filename, self.rare, self.loadlods, self.laplayer)
-            return {"FINISHED"}
-        file_list = sorted(os.listdir(directory))
-        obj_list = [item for item in file_list if item.endswith(".trmdl")]
-        for item in obj_list:
-            from_trmdlsv(directory, item, self.rare, self.loadlods, self.laplayer)
+            from_trmdlsv(directory, filename, self.rare, self.loadlods)
+
         return {"FINISHED"}
 
 
