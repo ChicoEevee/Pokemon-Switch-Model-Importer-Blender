@@ -478,6 +478,11 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         description="Offset to apply to animation during import, in frames",
         default=1.0
     )
+    use_scene_end: BoolProperty(
+        name="Set end scene range",
+        description="Use Scene playback range start frame as first frame of animation",
+        default=False
+    )
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         """
@@ -498,7 +503,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                 try:
                     import_animation(context, file_path, self.ignore_origin_location,
                                      context.scene.frame_start if self.use_scene_start
-                                     else self.anim_offset)
+                                     else self.anim_offset, self.use_scene_end)
                 except OSError as e:
                     self.report({"INFO"}, f"Failed to import {file_path}. {str(e)}")
                 else:
@@ -511,7 +516,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         try:
             import_animation(context, self.filepath, self.ignore_origin_location,
                              context.scene.frame_start if self.use_scene_start
-                             else self.anim_offset)
+                             else self.anim_offset, self.use_scene_end)
         except OSError as e:
             self.report({"ERROR"}, f"Failed to import {self.filepath}. {str(e)}")
             return {"CANCELLED"}
@@ -527,6 +532,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         sub = self.layout.column()
         sub.enabled = not self.use_scene_start
         sub.prop(self, "anim_offset")
+        self.layout.prop(self, "use_scene_end")
 
 
 def on_export_format_changed(struct: bpy.types.bpy_struct, context: bpy.types.Context):
