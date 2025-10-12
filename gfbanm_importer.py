@@ -47,6 +47,7 @@ def import_animation(
     :param file_path: Path to gfbanm file.
     :param ignore_origin_location: Whether to ignore location transforms from Origin track.
     :param frame_start: Start frame.
+    :param frame_end: True if set scene's end frame at last frame of animation.
     """
     if context.object is None or context.object.type != "ARMATURE":
         raise OSError("Target Armature not selected.")
@@ -59,8 +60,8 @@ def import_animation(
             raise OSError(f"{file_path} contains invalid info chunk.")
         if anm.info.keyFrames < 1:
             raise OSError(f"{file_path} contains invalid info.keyFrames chunk.")
-        if frame_end == True:
-            bpy.context.scene.frame_end = anm.info.keyFrames
+        if frame_end:
+            bpy.context.scene.frame_end = frame_start+anm.info.keyFrames-1
         print(f"Keyframes amount: {anm.info.keyFrames}.")
         if anm.info.frameRate < 1:
             raise OSError(f"{file_path} contains invalid info.frameRate chunk.")
