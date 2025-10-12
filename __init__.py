@@ -479,8 +479,8 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         default=1.0
     )
     use_scene_end: BoolProperty(
-        name="Set end scene range",
-        description="Use Scene playback range start frame as first frame of animation",
+        name="Set end Scene range",
+        description="Set scene playback end frame to last frame of animation",
         default=False
     )
 
