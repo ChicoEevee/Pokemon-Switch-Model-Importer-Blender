@@ -31,7 +31,7 @@ import flatbuffers
 IN_BLENDER_ENV = True
 blender_version = bpy.app.version
 
-def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
+def from_trmdlsv(filep, trmdlname, rare, loadlods):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdlname[:-6]))
