@@ -483,10 +483,10 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         description="Use Scene playback range start frame as first frame of animation",
         default=False
     )
-    anim_offset: FloatProperty(
+    anim_offset: IntProperty(
         name="Animation Offset",
         description="Offset to apply to animation during import, in frames",
-        default=1.0
+        default=1
     )
     use_scene_end: BoolProperty(
         name="Set end Scene range",
@@ -703,11 +703,11 @@ class PokemonSwitchImportMenu(bpy.types.Menu):
         :param context: Blender's context.
         """
         
-        self.layout.operator(ImportGfmdl.bl_idname, text="SWSH and Lets GO Models (.gfbmdl) NO TEXTURES FOR NOW REQUIRES TO BE MANUAL!!!")
         self.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
         self.layout.operator(ImportGfbanm.bl_idname, text="Pokémon Animation (.gfbanm/.tranm)")
         self.layout.operator(TRINSImport.bl_idname, text="Pokémon Map Instances (.trins)")
         self.layout.operator(TRSCNImport.bl_idname, text="Pokémon Scene Object (.trscn)")
+        self.layout.operator(ImportGfmdl.bl_idname, text="SWSH and Lets GO Models (.gfbmdl) NO TEXTURES FOR NOW REQUIRES TO BE MANUAL!!!")
 
 
 class PokemonSwitchExportMenu(bpy.types.Menu):
