@@ -38,7 +38,7 @@ def import_animation(
         context: bpy.types.Context,
         file_path: str,
         ignore_origin_location: bool,
-        frame_start: float,
+        frame_start: int,
         frame_end: bool
 ):
     """
@@ -89,7 +89,7 @@ def apply_animation_to_tracks(
         key_frames: int,
         tracks: list[BoneTrackT | None],
         ignore_origin_location: bool,
-        frame_start: float
+        frame_start: int
 ):
     """
     Applies animation to bones of selected Armature.
@@ -140,7 +140,7 @@ def apply_track_transforms_to_posebone(
         pose_bone: bpy.types.PoseBone,
         transforms: list[(Vector | None, Quaternion | None, Vector | None)],
         ignore_origin_location: bool,
-        frame_start: float
+        frame_start: int
 ):
     """
     Applies track transforms to PoseBone for every keyframe of animation.
