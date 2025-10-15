@@ -802,13 +802,29 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                         material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
                     if "Opaque" not in mat["mat_alpha_setting"]:
                         material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
-                    
-                    
-                if mat["mat_enable_highlight_map"]:
-                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + textureextension))
-                    material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
-
+                try:
+                    if mat["mat_enable_highlight_map"]:
+                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        try:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + textureextension))
+                        except:
+                            if "r_eye" in material.name:
+                                primary = base_path.replace("eye_lym", "r_eye_msk") + ".png"
+                            elif "l_eye" in material.name:
+                                primary = base_path.replace("eye_lym", "l_eye_msk") + ".png"
+                            else:
+                                primary = None
+                        
+                            fallback = base_path.replace("eye_lym", "eye_msk").replace("lym", "msk") + ".png"
+                        
+                            for path in [primary, fallback] if primary else [fallback]:
+                                full_path = os.path.join(filep, path)
+                                if os.path.exists(full_path):
+                                    highlight_image_texture.image = bpy.data.images.load(full_path)
+                                    break
+                        material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
+                except:
+                    print("Issue loading hightlight map")
                 #EyelidType Upper is Disabled for now~
                 if mat["mat_eyelid_type"] == "Lower":
                     eyelid_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
