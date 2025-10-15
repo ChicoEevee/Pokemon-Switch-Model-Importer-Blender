@@ -953,10 +953,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods):
             addons_path = bpy.utils.user_resource('SCRIPTS')
 
             if not 'ScViShader' in bpy.data.materials or not 'ScViShader' in bpy.data.materials:
+                blend_path = os.path.join(os.path.dirname(__file__), "SCVIShader.blend")
                 try:
-                    shader_dir = os.path.join(addons_path, "addons")
-                    os.makedirs(shader_dir, exist_ok=True)
-                    blend_path = os.path.join(shader_dir, "SCVIShader.blend")
                     response = requests.get("https://raw.githubusercontent.com/ChicoEevee/Pokemon-Switch-V2-Model-Importer-Blender/master/SCVIShader.blend", stream=True)
                     with open(blend_path, 'wb') as file:
                         file.write(response.content)
