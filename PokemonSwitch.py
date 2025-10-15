@@ -216,6 +216,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                     ]
                     transform_nodes = base_transform_nodes + extra_transform_nodes
                     bones = base_bones + extra_bones
+                    print(transform_nodes)
             else:
                 with open(os.path.join(filep, trskl), "rb") as f:
                     buf = bytearray(f.read())
@@ -377,20 +378,16 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
             mat_name = mat_fb.Name().decode("utf-8") if mat_fb.Name() else ""
 
             shaders = []
-            shader_params = []
             for s in range(mat_fb.ShadersLength()):
                 shader_fb = mat_fb.Shaders(s)
                 shader_name = shader_fb.ShaderName().decode("utf-8") if shader_fb.ShaderName() else ""
                 shader_values = []
-                print("------------------")
-                print("Material name:",mat_name)
-                print("Shader name:",shader_name)
                 for v in range(shader_fb.ShaderValuesLength()):
                     val_fb = shader_fb.ShaderValues(v)
                     name = val_fb.StringName().decode("utf-8")
                     value = val_fb.StringValue().decode("utf-8")
                     shader_values.append({"name": name, "value": value})
-                    shader_params.append((name, value))
+                    
                     if name == "EnableBaseColorMap": mat_enable_base_color_map = value == "True"
                     if name == "EnableNormalMap": mat_enable_normal_map = value == "True"
                     if name == "EnableAOMap": mat_enable_ao_map = value == "True"
@@ -403,21 +400,17 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                     if name == "NumMaterialLayer": mat_num_material_layer = int(value)
                     if name == "EyelidType": mat_eyelid_type = value
                     if name == "EnableColorTableMap": mat_enablecolortablemap = value
+                    
                 if shader_name: mat_shader = shader_name
                 shaders.append({"shader_name": shader_name, "shader_values": shader_values})
-            shader_params.sort(key=lambda x: x[0].lower())
-            print("== SHADER PARAMETERS ==")
-            for name, value in shader_params:
-                print(f"{name}: {value}")
 
             textures = []
-            texture_params = []
             for t in range(mat_fb.TexturesLength()):
                 tex_fb = mat_fb.Textures(t)
                 texture_name = tex_fb.TextureName().decode("utf-8")
                 texture_file = tex_fb.TextureFile().decode("utf-8")
                 textures.append({"texture_name": texture_name, "texture_file": texture_file})
-                texture_params.append((name, value))
+                
                 if texture_name == "BaseColorMap": mat_col0 = texture_file
                 if texture_name == "LayerMaskMap": mat_lym0 = texture_file
                 if texture_name == "NormalMap": mat_nrm0 = texture_file
@@ -431,17 +424,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 if texture_name == "UpperEyelidColorMap": mat_uppeyemsk0 = texture_file
                 if texture_name == "SSSMaskMap": mat_sssmask0 = texture_file
                 if texture_name == "ColorTableMap": mat_colortable_tex = texture_file
-            texture_params.sort(key=lambda x: x[0].lower())
-            print("== TEXTURE PARAMETERS ==")
-            for name, value in texture_params:
-                print(f"{name}: {value}")
-            
-            float_params = []
+
             for f in range(mat_fb.FloatParameterLength()):
                 fparam = mat_fb.FloatParameter(f)
                 name = fparam.FloatName().decode("utf-8")
                 value = fparam.FloatValue()
-                float_params.append((name, value))
                 if name == "Roughness": mat_rgh_value = value
                 elif name == "Reflectance": mat_reflectance = value
                 elif name == "EmissionIntensity": mat_emm_intensity = value
@@ -454,17 +441,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 elif name == "LayerMaskScale3": mat_lym_scale3 = value
                 elif name == "LayerMaskScale4": mat_lym_scale4 = value
                 elif name == "Metallic": mat_metallic = value
-            float_params.sort(key=lambda x: x[0].lower())
-            print("== FLOAT PARAMETERS ==")
-            for name, value in float_params:
-                print(f"{name}: {value}")
-                
-            int_params = []
             for f in range(mat_fb.IntParameterLength()):
                 fparam = mat_fb.IntParameter(f)
                 name = fparam.IntName().decode("utf-8")
                 value = fparam.IntValue()
-                int_params.append((name, value))
                 if name == "ColorTableDivideNumber": mat_colortabledividenumber = value
                 elif name == "BaseColorIndex1": mat_basecolor_index1 = value
                 elif name == "BaseColorIndex2": mat_basecolor_index2 = value
@@ -506,18 +486,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 elif name == "BaseColorIndex38": mat_basecolor_index38 = value
                 elif name == "BaseColorIndex39": mat_basecolor_index39 = value
                 elif name == "BaseColorIndex40": mat_basecolor_index40 = value
-            int_params.sort(key=lambda x: x[0].lower())
-            print("== INT PARAMETERS ==")
-            for name, value in int_params:
-                print(f"{name}: {value}")
-                
-            float4_params = []
             for f in range(mat_fb.Float4ParameterLength()):
                 fparam = mat_fb.Float4Parameter(f)
                 name = fparam.ColorName().decode("utf-8")
                 color = fparam.ColorValue()
-                rgba = (color.R(), color.G(), color.B(), color.A())
-                float4_params.append((name, rgba))
                 if name == "BaseColor":  mat_color_r, mat_color_g, mat_color_b = color.R(), color.G(), color.B()
                 elif name == "BaseColorLayer1": mat_color1_r, mat_color1_g, mat_color1_b = color.R(), color.G(), color.B()
                 elif name == "BaseColorLayer2":  mat_color2_r, mat_color2_g, mat_color2_b = color.R(), color.G(), color.B()
@@ -539,10 +511,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 elif name == "UVCenter0":
                     mat_uvcenter0_x = color.R()
                     mat_uvcenter0_y = color.G()
-        float4_params.sort(key=lambda x: x[0].lower())
-        print(f"== FLOAT 4 PARAMETERS ==")
-        for name, rgba in float4_params:
-            print(f"{name}: ({rgba[0]}, {rgba[1]}, {rgba[2]}, {rgba[3]})")                    
+                    
             mat_alpha_setting = mat_fb.AlphaType().decode("utf-8") if mat_fb.AlphaType() else ""
 
             mat_data_array.append({
@@ -649,6 +618,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 "mat_alpha_setting": mat_alpha_setting,
                 "mat_metallic": mat_metallic
             })
+        mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
         
         if IN_BLENDER_ENV:
             if not 'ScViShader' in bpy.data.materials or not 'ScViShader' in bpy.data.materials:
@@ -812,6 +782,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                                 rgb = colorsfromtable[key]
                                 rgba = (rgb[0], rgb[1], rgb[2], 1.0)
                                 tablecolor.append(rgba)
+                        print(tablecolor,mat["mat_colortabledividenumber"])
                         try:
                             if mat["mat_basecolor_index1"] > 0.1:
                                 shadegroupnodes.inputs['BaseColorLayer1'].default_value = tablecolor[mat["mat_basecolor_index1"]-1]
@@ -1187,6 +1158,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                                             vert_buff_param_position = readlong(trmsh)
                                         else:
                                             vert_buff_param_position = 0
+                                            print("vert_buff_param_position = 0")
 
                                         # -- Types:
                                         # -- 0x01: = Positions
@@ -1375,6 +1347,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                                     vert_buffer_sub_offset = ftell(trmbf) + readlong(trmbf)
                                     vert_buffer_sub_ret = ftell(trmbf)
                                     fseek(trmbf, vert_buffer_sub_offset)
+                                    if y == 0:
+                                        print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
+                                    else:
+                                        print(f"Vertex buffer {x} morph {y} header: {hex(ftell(trmbf))}")
                                     vert_buffer_sub_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_sub_struct)
                                     vert_buffer_sub_struct_len = readshort(trmbf)
                                     if vert_buffer_sub_struct_len != 0x0006:
