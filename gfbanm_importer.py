@@ -38,7 +38,8 @@ def import_animation(
         context: bpy.types.Context,
         file_path: str,
         ignore_origin_location: bool,
-        frame_start: float
+        frame_start: int,
+        frame_end: bool
 ):
     """
     Imports animation from processing gfbanm file.
@@ -46,6 +47,7 @@ def import_animation(
     :param file_path: Path to gfbanm file.
     :param ignore_origin_location: Whether to ignore location transforms from Origin track.
     :param frame_start: Start frame.
+    :param frame_end: True if set scene's end frame at last frame of animation.
     """
     if context.object is None or context.object.type != "ARMATURE":
         raise OSError("Target Armature not selected.")
@@ -58,6 +60,8 @@ def import_animation(
             raise OSError(f"{file_path} contains invalid info chunk.")
         if anm.info.keyFrames < 1:
             raise OSError(f"{file_path} contains invalid info.keyFrames chunk.")
+        if frame_end:
+            bpy.context.scene.frame_end = frame_start+anm.info.keyFrames-1
         print(f"Keyframes amount: {anm.info.keyFrames}.")
         if anm.info.frameRate < 1:
             raise OSError(f"{file_path} contains invalid info.frameRate chunk.")
@@ -85,7 +89,7 @@ def apply_animation_to_tracks(
         key_frames: int,
         tracks: list[BoneTrackT | None],
         ignore_origin_location: bool,
-        frame_start: float
+        frame_start: int
 ):
     """
     Applies animation to bones of selected Armature.
@@ -136,7 +140,7 @@ def apply_track_transforms_to_posebone(
         pose_bone: bpy.types.PoseBone,
         transforms: list[(Vector | None, Quaternion | None, Vector | None)],
         ignore_origin_location: bool,
-        frame_start: float
+        frame_start: int
 ):
     """
     Applies track transforms to PoseBone for every keyframe of animation.

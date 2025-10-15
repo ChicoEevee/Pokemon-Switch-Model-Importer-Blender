@@ -17,7 +17,9 @@ from bpy.types import (
         )
 import bpy
 import mathutils
+from mathutils import Color
 import math
+from math import pow
 import glob
 import shutil
 import sys
@@ -26,25 +28,55 @@ import requests
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 from Titan.Model.TRMDL import TRMDL
 from Titan.Model.TRSKL import TRSKL
-
+from Titan.Model import TRMTR, Material, Shader, Texture, FloatParameter, Float4Parameter, StringParameter
 import flatbuffers
 IN_BLENDER_ENV = True
 blender_version = bpy.app.version
 
-def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
+def find_player_base_path(filep, chara_check):
+    """Determine the correct TRSKL path for the player character."""
+    paths = []
+    if chara_check == "SVProtag":
+        paths = [
+            "../../model_pc_base/model/p0_base.trskl",
+            "../../../../p2/model/base/p2_base0001_00_default/p2_base0001_00_default.trskl",
+            "../../p2/p2_base0001_00_default/p2_base0001_00_default.trskl"
+        ]
+    elif chara_check == "CommonNPCbu":
+        paths = ["../../../model_cc_base/bu/bu_base.trskl", "../../base/cc_base0001_00_young_m/cc_base0001_00_young_m.trskl"]
+    elif chara_check == "CommonNPCdm" or chara_check == "CommonNPCdf":
+        paths = ["../../../model_cc_base/dm/dm_base.trskl", "../../base/cc_base0001_00_young_m/cc_base0001_00_young_m.trskl"]
+    elif chara_check == "CommonNPCem":
+        paths = ["../../../model_cc_base/em/em_base.trskl", "../../base/cc_base0001_00_young_m/cc_base0001_00_young_m.trskl"]
+    elif chara_check == "CommonNPCfm" or chara_check == "CommonNPCff":
+        paths = ["../../../model_cc_base/fm/fm_base.trskl", "../../base/cc_base0001_00_young_m/cc_base0001_00_young_m.trskl"]
+    elif chara_check == "CommonNPCgm" or chara_check == "CommonNPCgf":
+        paths = ["../../../model_cc_base/gm/gm_base.trskl", "../../base/cc_base0001_00_young_m/cc_base0001_00_young_m.trskl"]
+    elif chara_check == "CommonNPCrv":
+        paths = ["../../../model_cc_base/rv/rv_base.trskl", "../../base/cc_base0001_00_young_m/cc_base0001_00_young_m.trskl"]
+
+    for path in paths:
+        full_path = os.path.join(filep, path)
+        if os.path.exists(full_path):
+            print(path, "exists")
+            return full_path
+    return None
+
+
+def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdlname[:-6]))
         bpy.context.scene.collection.children.link(new_collection)
-
-
+    mat_data_array = []
     textureextension = ".png"
-
+    transform_nodes = []
+    bones = []
     trsklmapped = []
     materials = []
     bone_structure = None
     trmsh = None
-    trmtr = None
+    trmtr_path = None
     player_base_trskl_path = None
     trmsh_lods_array = []
     bone_array = []
@@ -58,10 +90,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
     trmdl = TRMDL.GetRootAsTRMDL(buf, 0)
     trmsh_count = trmdl.MeshesLength()
     trmtr_name = trmdl.Materials(0).decode('utf-8')
-    if rare == True:
-        trmtr = open(os.path.join(filep, Path(trmtr_name).stem + "_rare.trmtr"), "rb")
+    if rare:
+        trmtr_path = os.path.join(filep, Path(trmtr_name).stem + "_rare.trmtr")
     else:
-        trmtr = open(os.path.join(filep, trmtr_name), "rb") 
+        trmtr_path = os.path.join(filep, trmtr_name) 
     trmsh = trmdl.Meshes(0).Filename().decode('utf-8')
     try:
         trmsh_lod2 = trmdl.Meshes(2).Filename().decode('utf-8')
@@ -76,90 +108,37 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
         trskl = trmdl.Skeleton().Filename().decode('utf-8')
     except:
         trskl = None
-    if trmsh.startswith(('au_')): chara_check = "CommonNPCLA"
-    elif trmsh.startswith(('bu_')): chara_check = "CommonNPCLA"
-    elif trmsh.startswith(('cf_')): chara_check = "CommonNPCLA"
-    elif trmsh.startswith(('cm_')): chara_check = "CommonNPCLA"
-    elif trmsh.startswith(('df_')): chara_check = "CommonNPCLA"
-    elif trmsh.startswith(('dm_')): chara_check = "CommonNPCLA"
+    if trmsh.startswith(('au_')): chara_check = "CommonNPCau"
+    elif trmsh.startswith(('bu_')): chara_check = "CommonNPCbu"
+    elif trmsh.startswith(('cf_')): chara_check = "CommonNPCcf"
+    elif trmsh.startswith(('cm_')): chara_check = "CommonNPCcm"
+    elif trmsh.startswith(('df_')): chara_check = "CommonNPCdf"
+    elif trmsh.startswith(('dm_')): chara_check = "CommonNPCdm"
+    elif trmsh.startswith(('ef_')): chara_check = "CommonNPCef"
+    elif trmsh.startswith(('em_')): chara_check = "CommonNPCem"
+    elif trmsh.startswith(('ff_')): chara_check = "CommonNPCff"
+    elif trmsh.startswith(('fm_')): chara_check = "CommonNPCfm"
+    elif trmsh.startswith(('gf_')): chara_check = "CommonNPCgf"
+    elif trmsh.startswith(('gm_')): chara_check = "CommonNPCgm"
+    elif trmsh.startswith(('rv_')): chara_check = "CommonNPCrv"
     elif trmsh.startswith(('p1')): chara_check = "SVProtag"
     elif trmsh.startswith(('p2')): chara_check = "SVProtag"
     elif trmsh.startswith(('p0')): chara_check = "SVProtag"
     else: chara_check = None
-    
-    if chara_check is not None:
-        if chara_check != "None":
-            if chara_check == "SVProtag":
-                if laplayer == True:
-                    player_base_trskl_path = "../../../../p2/model/base/p2_base0001_00_default/p2_base0001_00_default.trskl"
-                else:
-                    player_base_trskl_path = "../../model_pc_base/model/p0_base.trskl"
-            elif chara_check == "CommonNPCLA":
-                player_base_trskl_path = "../../base/cc_base0001_00_young_m/cc_base0001_00_young_m.trskl"
-            with open(os.path.join(filep, player_base_trskl_path), "rb") as f:
-                buf = bytearray(f.read())
-            base_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
-
-            base_transform_nodes = []
-            base_name_to_idx = {}
-            for i in range(base_trskl.TransformNodesLength()):
-                node = base_trskl.TransformNodes(i)
-                name = node.Name().decode('utf-8')
-                base_name_to_idx[name] = len(base_transform_nodes)
-                base_transform_nodes.append({
-                    "name": name,
-                    "VecTranslateX": node.Transform().VecTranslate().X(),
-                    "VecTranslateY": node.Transform().VecTranslate().Y(),
-                    "VecTranslateZ": node.Transform().VecTranslate().Z(),
-                    "VecScaleX": node.Transform().VecScale().X(),
-                    "VecScaleY": node.Transform().VecScale().Y(),
-                    "VecScaleZ": node.Transform().VecScale().Z(),
-                    "VecRotX": node.Transform().VecRot().X(),
-                    "VecRotY": node.Transform().VecRot().Y(),
-                    "VecRotZ": node.Transform().VecRot().Z(),
-                    "parent_idx": node.ParentIdx() + 1,
-                    "rig_idx": node.RigIdx(),
-                    "effect_node": node.EffectNode()
-                })
-
-            base_bones = [
-                {
-                    "inherit_scale": bone.InheritScale(),
-                    "influence_skinning": bone.InfluenceSkinning()
-                }
-                for bone in (base_trskl.Bones(i) for i in range(base_trskl.BonesLength()))
-            ]
-            if trskl is not None:
-                # --- Load extra TRSKL ---
-                with open(os.path.join(filep, trskl), "rb") as f:
+    try:
+        if chara_check is not None:
+            player_base_trskl_path = find_player_base_path(filep, chara_check)
+            if player_base_trskl_path != None:
+                with open(player_base_trskl_path, "rb") as f:
                     buf = bytearray(f.read())
-                extra_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
-    
-                rig_offset = extra_trskl.RigOffset()
-                base_transform_count = len(base_transform_nodes)
-    
-                extra_transform_nodes = []
-                for i in range(extra_trskl.TransformNodesLength()):
-                    node = extra_trskl.TransformNodes(i)
+                base_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
+                base_transform_nodes = []
+                base_name_to_idx = {}
+                for i in range(base_trskl.TransformNodesLength()):
+                    node = base_trskl.TransformNodes(i)
                     name = node.Name().decode('utf-8')
-                    rig_idx = node.RigIdx() + rig_offset
-                    parent_idx = node.ParentIdx()
-                    effect_node_name = node.EffectNode()
-                    
-                    if effect_node_name:
-                        effect_node_name = effect_node_name.decode('utf-8')
-                        if effect_node_name in base_name_to_idx:
-                            print(effect_node_name)
-                            # Remove +1 here to match JSON merging
-                            parent_idx = base_name_to_idx[effect_node_name]
-                        else:
-                            raise ValueError(f"Effect node '{effect_node_name}' not found in base skeleton.")
-                    else:
-                        parent_idx += rig_offset + 2
-                        if name == "side_hair_02":
-                            print(parent_idx)
-                    
-                    extra_transform_nodes.append({
+                    base_name_to_idx[name] = len(base_transform_nodes)
+                    base_transform_nodes.append({
                         "name": name,
                         "VecTranslateX": node.Transform().VecTranslate().X(),
                         "VecTranslateY": node.Transform().VecTranslate().Y(),
@@ -170,33 +149,105 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                         "VecRotX": node.Transform().VecRot().X(),
                         "VecRotY": node.Transform().VecRot().Y(),
                         "VecRotZ": node.Transform().VecRot().Z(),
-                        "parent_idx": parent_idx + 1,
-                        "rig_idx": rig_idx,
-                        "effect_node": effect_node_name
+                        "parent_idx": node.ParentIdx() + 1,
+                        "rig_idx": node.RigIdx(),
+                        "effect_node": node.EffectNode()
                     })
-    
-                extra_bones = [
+                
+                base_bones = [
                     {
                         "inherit_scale": bone.InheritScale(),
                         "influence_skinning": bone.InfluenceSkinning()
                     }
-                    for bone in (extra_trskl.Bones(i) for i in range(extra_trskl.BonesLength()))
+                    for bone in (base_trskl.Bones(i) for i in range(base_trskl.BonesLength()))
                 ]
-    
-                # --- Merge ---
-                transform_nodes = base_transform_nodes + extra_transform_nodes
-                bones = base_bones + extra_bones
-            else:
                 transform_nodes = base_transform_nodes
                 bones = base_bones
-
-        else:
-            # Original single TRSKL parsing
+                if trskl is not None:
+                    # --- Load extra TRSKL ---
+                    with open(os.path.join(filep, trskl), "rb") as f:
+                        buf = bytearray(f.read())
+                    extra_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
+                
+                    rig_offset = extra_trskl.RigOffset()
+                    base_transform_count = len(base_transform_nodes)
+                
+                    extra_transform_nodes = []
+                    for i in range(extra_trskl.TransformNodesLength()):
+                        node = extra_trskl.TransformNodes(i)
+                        name = node.Name().decode('utf-8')
+                        rig_idx = node.RigIdx() + rig_offset
+                        parent_idx = node.ParentIdx()
+                        effect_node_name = node.EffectNode()
+                        
+                        if effect_node_name:
+                            effect_node_name = effect_node_name.decode('utf-8')
+                            if effect_node_name in base_name_to_idx:
+                                # Remove +1 here to match JSON merging
+                                parent_idx = base_name_to_idx[effect_node_name]
+                            else:
+                                raise ValueError(f"Effect node '{effect_node_name}' not found in base skeleton.")
+                        else:
+                            parent_idx += rig_offset + 2
+                        
+                        extra_transform_nodes.append({
+                            "name": name,
+                            "VecTranslateX": node.Transform().VecTranslate().X(),
+                            "VecTranslateY": node.Transform().VecTranslate().Y(),
+                            "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                            "VecScaleX": node.Transform().VecScale().X(),
+                            "VecScaleY": node.Transform().VecScale().Y(),
+                            "VecScaleZ": node.Transform().VecScale().Z(),
+                            "VecRotX": node.Transform().VecRot().X(),
+                            "VecRotY": node.Transform().VecRot().Y(),
+                            "VecRotZ": node.Transform().VecRot().Z(),
+                            "parent_idx": parent_idx + 1,
+                            "rig_idx": rig_idx,
+                            "effect_node": effect_node_name
+                        })
+                
+                    extra_bones = [
+                        {
+                            "inherit_scale": bone.InheritScale(),
+                            "influence_skinning": bone.InfluenceSkinning()
+                        }
+                        for bone in (extra_trskl.Bones(i) for i in range(extra_trskl.BonesLength()))
+                    ]
+                    transform_nodes = base_transform_nodes + extra_transform_nodes
+                    bones = base_bones + extra_bones
+            else:
+                with open(os.path.join(filep, trskl), "rb") as f:
+                    buf = bytearray(f.read())
+                trskl_data = TRSKL.GetRootAsTRSKL(buf, 0)
+            
+                
+                for i in range(trskl_data.TransformNodesLength()):
+                    node = trskl_data.TransformNodes(i)
+                    transform_nodes.append({
+                        "name": node.Name().decode('utf-8'),
+                        "VecTranslateX": node.Transform().VecTranslate().X(),
+                        "VecTranslateY": node.Transform().VecTranslate().Y(),
+                        "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                        "VecScaleX": node.Transform().VecScale().X(),
+                        "VecScaleY": node.Transform().VecScale().Y(),
+                        "VecScaleZ": node.Transform().VecScale().Z(),
+                        "VecRotX": node.Transform().VecRot().X(),
+                        "VecRotY": node.Transform().VecRot().Y(),
+                        "VecRotZ": node.Transform().VecRot().Z(),
+                        "parent_idx": node.ParentIdx() + 1,
+                        "rig_idx": node.RigIdx(),
+                    })
+                for i in range(trskl_data.BonesLength()):
+                    bone = trskl_data.Bones(i)
+                    bones.append({
+                        "inherit_scale": bone.InheritScale(),
+                        "influence_skinning": bone.InfluenceSkinning(),
+                    })
+        elif trskl is not None:
             with open(os.path.join(filep, trskl), "rb") as f:
                 buf = bytearray(f.read())
             trskl_data = TRSKL.GetRootAsTRSKL(buf, 0)
-
-            transform_nodes = []
+        
             for i in range(trskl_data.TransformNodesLength()):
                 node = trskl_data.TransformNodes(i)
                 transform_nodes.append({
@@ -213,47 +264,14 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                     "parent_idx": node.ParentIdx() + 1,
                     "rig_idx": node.RigIdx(),
                 })
-
-            bones = []
             for i in range(trskl_data.BonesLength()):
                 bone = trskl_data.Bones(i)
                 bones.append({
                     "inherit_scale": bone.InheritScale(),
                     "influence_skinning": bone.InfluenceSkinning(),
                 })
-    elif trskl is not None:
-        # Original single TRSKL parsing
-        with open(os.path.join(filep, trskl), "rb") as f:
-            buf = bytearray(f.read())
-        trskl_data = TRSKL.GetRootAsTRSKL(buf, 0)
-    
-        transform_nodes = []
-        for i in range(trskl_data.TransformNodesLength()):
-            node = trskl_data.TransformNodes(i)
-            transform_nodes.append({
-                "name": node.Name().decode('utf-8'),
-                "VecTranslateX": node.Transform().VecTranslate().X(),
-                "VecTranslateY": node.Transform().VecTranslate().Y(),
-                "VecTranslateZ": node.Transform().VecTranslate().Z(),
-                "VecScaleX": node.Transform().VecScale().X(),
-                "VecScaleY": node.Transform().VecScale().Y(),
-                "VecScaleZ": node.Transform().VecScale().Z(),
-                "VecRotX": node.Transform().VecRot().X(),
-                "VecRotY": node.Transform().VecRot().Y(),
-                "VecRotZ": node.Transform().VecRot().Z(),
-                "parent_idx": node.ParentIdx() + 1,
-                "rig_idx": node.RigIdx(),
-            })
-    
-        bones = []
-        for i in range(trskl_data.BonesLength()):
-            bone = trskl_data.Bones(i)
-            bones.append({
-                "inherit_scale": bone.InheritScale(),
-                "influence_skinning": bone.InfluenceSkinning(),
-            })
-
-            
+        
+                
         if IN_BLENDER_ENV:
             new_armature = bpy.data.armatures.new(trmdlname[:-6])
             bone_structure = bpy.data.objects.new(trmdlname[:-6], new_armature)
@@ -298,656 +316,311 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
             bone_array.append(new_bone)
         if IN_BLENDER_ENV:
             bpy.ops.object.editmode_toggle()
-    if trmtr is not None:
-        print("Parsing TRMTR...")
-        trmtr_file_start = readlong(trmtr)
-        mat_data_array = []
-        fseek(trmtr, trmtr_file_start)
-        trmtr_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, trmtr_struct)
-        trmtr_struct_len = readshort(trmtr)
-
-        if trmtr_struct_len != 0x0008:
-            raise AssertionError("Unexpected TRMTR header struct length!")
-        trmtr_struct_section_len = readshort(trmtr)
-        trmtr_struct_start = readshort(trmtr)
-        trmtr_struct_material = readshort(trmtr)
-
-        if trmtr_struct_material != 0:
-            fseek(trmtr, trmtr_file_start + trmtr_struct_material)
-            mat_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_start)
-            mat_count = readlong(trmtr)
-            for x in range(mat_count):
-                mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = ""
-                mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0; mat_uv_trs_v = 0
-                mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0; mat_uv_trs2_v = 0
-                mat_color_r = 1.0; mat_color_g = 1.0; mat_color_b = 1.0
-                mat_color1_r = 1.0; mat_color1_g = 1.0; mat_color1_b = 1.0
-                mat_color2_r = 1.0; mat_color2_g = 1.0; mat_color2_b = 1.0
-                mat_color3_r = 1.0; mat_color3_g = 1.0; mat_color3_b = 1.0
-                mat_color4_r = 12312312.0; mat_color4_g = 12312312.0; mat_color4_b = 12312312.0
-
-                mat_emcolor1_r = 0.0; mat_emcolor1_g = 0.0; mat_emcolor1_b = 0.0
-                mat_emcolor2_r = 0.0; mat_emcolor2_g = 0.0; mat_emcolor2_b = 0.0
-                mat_emcolor3_r = 0.0; mat_emcolor3_g = 0.0; mat_emcolor3_b = 0.0
-                mat_emcolor4_r = 0.0; mat_emcolor4_g = 0.0; mat_emcolor4_b = 0.0
-                mat_emcolor5_r = 0.0; mat_emcolor5_g = 0.0; mat_emcolor5_b = 0.0
-                mat_ssscolor_r = 0.0; mat_ssscolor_g = 0.0; mat_ssscolor_b = 0.0
-                mat_rgh_layer0 = 1.0; mat_rgh_layer1 = 1.0; mat_rgh_layer2 = 1.0; mat_rgh_layer3 = 1.0; mat_rgh_layer4 = 1.0
-                mat_mtl_layer0 = 0.0; mat_mtl_layer1 = 0.0; mat_mtl_layer2 = 0.0; mat_mtl_layer3 = 0.0; mat_mtl_layer4 = 0.0
-                mat_reflectance = 0.0
-                mat_emm_intensity = 1.0
-                mat_sss_offset = 0.0
-                mat_offset = ftell(trmtr) + readlong(trmtr)
-                mat_ret = ftell(trmtr)
-
-                mat_enable_base_color_map = False
-                mat_enable_normal_map = False
-                mat_enable_ao_map = False
-                mat_enable_emission_color_map = False
-                mat_enable_roughness_map = False
-                mat_enable_metallic_map = False
-                mat_enable_displacement_map = False
-                mat_enable_highlight_map = False
-                mat_num_material_layer = 0
-                fseek(trmtr, mat_offset)
-                print("--------------------")
-                mat_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_struct)
-                mat_struct_len = readshort(trmtr)
-
-                if mat_struct_len != 0x0024:
-                    raise AssertionError("Unexpected material struct length!")
-                mat_struct_section_len = readshort(trmtr)
-                mat_struct_ptr_param_a = readshort(trmtr)
-                mat_struct_ptr_param_b = readshort(trmtr)
-                mat_struct_ptr_param_c = readshort(trmtr)
-                mat_struct_ptr_param_d = readshort(trmtr)
-                mat_struct_ptr_param_e = readshort(trmtr)
-                mat_struct_ptr_param_f = readshort(trmtr)
-                mat_struct_ptr_param_g = readshort(trmtr)
-                mat_struct_ptr_param_h = readshort(trmtr)
-                mat_struct_ptr_param_i = readshort(trmtr)
-                mat_struct_ptr_param_j = readshort(trmtr)
-                mat_struct_ptr_param_k = readshort(trmtr)
-                mat_struct_ptr_param_l = readshort(trmtr)
-                mat_struct_ptr_param_m = readshort(trmtr)
-                mat_struct_ptr_param_n = readshort(trmtr)
-                mat_struct_ptr_param_o = readshort(trmtr)
-                mat_struct_ptr_param_p = readshort(trmtr)
-
-                if mat_struct_ptr_param_a != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_a)
-                    mat_param_a_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_a_start)
-                    mat_name_len = readlong(trmtr)
-                    mat_name = readfixedstring(trmtr, mat_name_len)
-                    print(f"Material properties for {mat_name}:")
-                if mat_struct_ptr_param_b != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_b)
-                    mat_param_b_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_start)
-                    mat_param_b_section_count = readlong(trmtr)
-                    for z in range(mat_param_b_section_count):
-                        mat_param_b_offset = ftell(trmtr) + readlong(trmtr)
-                        mat_param_b_ret = ftell(trmtr)
-                        fseek(trmtr, mat_param_b_offset)
-                        mat_param_b_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_b_struct)
-                        mat_param_b_struct_len = readshort(trmtr)
-
-                        if mat_param_b_struct_len != 0x0008:
-                            raise AssertionError("Unexpected material param b struct length!")
-                        mat_param_b_struct_section_len = readshort(trmtr)
-                        mat_param_b_struct_ptr_string = readshort(trmtr)
-                        mat_param_b_struct_ptr_params = readshort(trmtr)
-
-                        if mat_param_b_struct_ptr_string != 0:
-                            fseek(trmtr, mat_param_b_offset + mat_param_b_struct_ptr_string)
-                            mat_param_b_shader_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_shader_start)
-                            mat_param_b_shader_len = readlong(trmtr)
-                            mat_param_b_shader_string = readfixedstring(trmtr, mat_param_b_shader_len)
-                            print(f"Shader: {mat_param_b_shader_string}")
-                            mat_shader = mat_param_b_shader_string
-                        if mat_param_b_struct_ptr_params != 0:
-                            fseek(trmtr, mat_param_b_offset + mat_param_b_struct_ptr_params)
-                            mat_param_b_sub_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_sub_start)
-                            mat_param_b_sub_count = readlong(trmtr)
-                            for y in range(mat_param_b_sub_count):
-                                mat_param_b_sub_offset = ftell(trmtr) + readlong(trmtr)
-                                mat_param_b_sub_ret = ftell(trmtr)
-                                fseek(trmtr, mat_param_b_sub_offset)
-                                mat_param_b_sub_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_b_sub_struct)
-                                mat_param_b_sub_struct_len = readshort(trmtr)
-
-                                if mat_param_b_sub_struct_len != 0x0008:
-                                    raise AssertionError("Unexpected material param b sub struct length!")
-                                mat_param_b_sub_struct_section_len = readshort(trmtr)
-                                mat_param_b_sub_struct_ptr_string = readshort(trmtr)
-                                mat_param_b_sub_struct_ptr_value = readshort(trmtr)
-
-                                if mat_param_b_sub_struct_ptr_string != 0:
-                                    fseek(trmtr, mat_param_b_sub_offset + mat_param_b_sub_struct_ptr_string)
-                                    mat_param_b_sub_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_sub_string_start)
-                                    mat_param_b_sub_string_len = readlong(trmtr)
-                                    mat_param_b_sub_string = readfixedstring(trmtr, mat_param_b_sub_string_len)
-                                if mat_param_b_sub_struct_ptr_value != 0:
-                                    fseek(trmtr, mat_param_b_sub_offset + mat_param_b_sub_struct_ptr_value)
-                                    mat_param_b_sub_value_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_sub_value_start)
-                                    mat_param_b_sub_value_len = readlong(trmtr)
-                                    mat_param_b_sub_value = readfixedstring(trmtr, mat_param_b_sub_value_len)
-                                    print(f"(param_b) {mat_param_b_sub_string}: {mat_param_b_sub_value}")
-
-                                if mat_param_b_sub_string == "EnableBaseColorMap": mat_enable_base_color_map = mat_param_b_sub_value == "True"
-                                if mat_param_b_sub_string == "EnableNormalMap": mat_enable_normal_map = mat_param_b_sub_value == "True"
-                                if mat_param_b_sub_string == "EnableAOMap": mat_enable_ao_map = mat_param_b_sub_value == "True"
-                                if mat_param_b_sub_string == "EnableEmissionColorMap": mat_enable_emission_color_map = mat_param_b_sub_value == "True"
-                                if mat_param_b_sub_string == "EnableRoughnessMap": mat_enable_roughness_map = mat_param_b_sub_value == "True"
-                                if mat_param_b_sub_string == "EnableMetallicMap": mat_enable_metallic_map = mat_param_b_sub_value == "True"
-                                if mat_param_b_sub_string == "EnableDisplacementMap": mat_enable_displacement_map = mat_param_b_sub_value == "True"
-                                if mat_param_b_sub_string == "EnableHighlight": mat_enable_highlight_map = mat_param_b_sub_value == "True"
-                                if mat_param_b_sub_string == "EnableOverrideColor": mat_enable_override_color = mat_param_b_sub_value == "True"
-                                if mat_param_b_sub_string == "NumMaterialLayer": mat_num_material_layer = int(mat_param_b_sub_value)
-                                fseek(trmtr, mat_param_b_sub_ret)
-                        fseek(trmtr, mat_param_b_ret)
-
-                if mat_struct_ptr_param_c != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_c)
-                    mat_param_c_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_c_start)
-                    mat_param_c_count = readlong(trmtr)
-
-                    for z in range(mat_param_c_count):
-                        mat_param_c_offset = ftell(trmtr) + readlong(trmtr)
-                        mat_param_c_ret = ftell(trmtr)
-                        fseek(trmtr, mat_param_c_offset)
-                        mat_param_c_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_c_struct)
-                        mat_param_c_struct_len = readshort(trmtr)
-
-                        if mat_param_c_struct_len == 0x0008:
-                            mat_param_c_struct_section_len = readshort(trmtr)
-                            mat_param_c_struct_ptr_string = readshort(trmtr)
-                            mat_param_c_struct_ptr_value = readshort(trmtr)
-                            mat_param_c_struct_ptr_id = 0
-                        elif mat_param_c_struct_len == 0x000A:
-                            mat_param_c_struct_section_len = readshort(trmtr)
-                            mat_param_c_struct_ptr_string = readshort(trmtr)
-                            mat_param_c_struct_ptr_value = readshort(trmtr)
-                            mat_param_c_struct_ptr_id = readshort(trmtr)
-                        else:
-                            raise AssertionError("Unexpected material param c struct length!")
-
-                        if mat_param_c_struct_ptr_string != 0:
-                            fseek(trmtr, mat_param_c_offset + mat_param_c_struct_ptr_string)
-                            mat_param_c_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_c_string_start)
-                            mat_param_c_string_len = readlong(trmtr)
-                            mat_param_c_string = readfixedstring(trmtr, mat_param_c_string_len)
-                        if mat_param_c_struct_ptr_value != 0:
-                            fseek(trmtr, mat_param_c_offset + mat_param_c_struct_ptr_value)
-                            mat_param_c_value_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_c_value_start)
-                            mat_param_c_value_len = readlong(trmtr)  # - 5 # Trimming the ".bntx" from the end.
-                            mat_param_c_value = readfixedstring(trmtr, mat_param_c_value_len)
-                        if mat_param_c_struct_ptr_id != 0:
-                            fseek(trmtr, mat_param_c_offset + mat_param_c_struct_ptr_id)
-                            mat_param_c_id = readlong(trmtr)
-                        else:
-                            mat_param_c_id = 0
-
-                        if mat_param_c_string == "BaseColorMap": mat_col0 = mat_param_c_value
-                        if mat_param_c_string == "LayerMaskMap": mat_lym0 = mat_param_c_value
-                        if mat_param_c_string == "NormalMap": mat_nrm0 = mat_param_c_value
-                        if mat_param_c_string == "AOMap": mat_ao0 = mat_param_c_value
-                        if mat_param_c_string == "EmissionColorMap": mat_emi0 = mat_param_c_value
-                        if mat_param_c_string == "RoughnessMap": mat_rgh0 = mat_param_c_value
-                        if mat_param_c_string == "MetallicMap": mat_mtl0 = mat_param_c_value
-                        if mat_param_c_string == "DisplacementMap": mat_msk0 = mat_param_c_value
-                        if mat_param_c_string == "HighlightMaskMap": mat_highmsk0 = mat_param_c_value
-                        if mat_param_c_string == "SSSMaskMap": mat_sssmask0 = mat_param_c_value
-                        # -- There's also all of the following, which aren't automatically assigned to keep things simple.
-                        # -- "AOMap"
-                        # -- "AOMap1"
-                        # -- "AOMap2"
-                        # -- "BaseColorMap1"
-                        # -- "DisplacementMap"
-                        # -- "EyelidShadowMaskMap"
-                        # -- "FlowMap"
-                        # -- "FoamMaskMap"
-                        # -- "GrassCollisionMap"
-                        # -- "HighlightMaskMap"
-                        # -- "LowerEyelidColorMap"
-                        # -- "NormalMap1"
-                        # -- "NormalMap2"
-                        # -- "PackedMap"
-                        # -- "UpperEyelidColorMap"
-                        # -- "WeatherLayerMaskMap"
-                        # -- "WindMaskMap"
-
-                        print(f"(param_c) {mat_param_c_string}: {mat_param_c_value} [{mat_param_c_id}]")
-                        fseek(trmtr, mat_param_c_ret)
-
-                if mat_struct_ptr_param_d != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_d)
-                    mat_param_d_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_d_start)
-                    mat_param_d_count = readlong(trmtr)
-
-                    for z in range(mat_param_d_count):
-                        mat_param_d_offset = ftell(trmtr) + readlong(trmtr)
-                        mat_param_d_ret = ftell(trmtr)
-                        fseek(trmtr, mat_param_d_offset)
-                        mat_param_d_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_d_struct)
-                        mat_param_d_struct_len = readshort(trmtr)
-
-                        if mat_param_d_struct_len != 0x001E:
-                            raise AssertionError("Unexpected material param d struct length!")
-                        mat_param_d_struct_section_len = readshort(trmtr)
-                        mat_param_d_struct_ptr_a = readshort(trmtr)
-                        mat_param_d_struct_ptr_b = readshort(trmtr)
-                        mat_param_d_struct_ptr_c = readshort(trmtr)
-                        mat_param_d_struct_ptr_d = readshort(trmtr)
-                        mat_param_d_struct_ptr_e = readshort(trmtr)
-                        mat_param_d_struct_ptr_f = readshort(trmtr)
-                        mat_param_d_struct_ptr_g = readshort(trmtr)
-                        mat_param_d_struct_ptr_h = readshort(trmtr)
-                        mat_param_d_struct_ptr_i = readshort(trmtr)
-                        mat_param_d_struct_ptr_j = readshort(trmtr)
-                        mat_param_d_struct_ptr_k = readshort(trmtr)
-                        mat_param_d_struct_ptr_l = readshort(trmtr)
-                        mat_param_d_struct_ptr_m = readshort(trmtr)
-
-                        if mat_param_d_struct_ptr_a != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_a)
-                            mat_param_d_value_a = readlong(trmtr)
-                        else: mat_param_d_value_a = 0
-                        if mat_param_d_struct_ptr_b != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_b)
-                            mat_param_d_value_b = readlong(trmtr)
-                        else: mat_param_d_value_b = 0
-                        if mat_param_d_struct_ptr_c != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_c)
-                            mat_param_d_value_c = readlong(trmtr)
-                        else: mat_param_d_value_c = 0
-                        if mat_param_d_struct_ptr_d != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_d)
-                            mat_param_d_value_d = readlong(trmtr)
-                        else: mat_param_d_value_d = 0
-                        if mat_param_d_struct_ptr_e != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_e)
-                            mat_param_d_value_e = readlong(trmtr)
-                        else: mat_param_d_value_e = 0
-                        if mat_param_d_struct_ptr_f != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_f)
-                            mat_param_d_value_f = readlong(trmtr)
-                        else: mat_param_d_value_f = 0
-                        if mat_param_d_struct_ptr_g != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_g)
-                            mat_param_d_value_g = readlong(trmtr)
-                        else: mat_param_d_value_g = 0
-                        if mat_param_d_struct_ptr_h != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_h)
-                            mat_param_d_value_h = readlong(trmtr)
-                        else: mat_param_d_value_h = 0
-                        if mat_param_d_struct_ptr_i != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_i)
-                            mat_param_d_value_i = readlong(trmtr)
-                        else: mat_param_d_value_i = 0
-                        if mat_param_d_struct_ptr_j != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_j)
-                            mat_param_d_value_j = readlong(trmtr)
-                        else: mat_param_d_value_j = 0
-                        if mat_param_d_struct_ptr_k != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_k)
-                            mat_param_d_value_k = readlong(trmtr)
-                        else: mat_param_d_value_k = 0
-                        if mat_param_d_struct_ptr_l != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_l)
-                            mat_param_d_value_l = readlong(trmtr)
-                        else: mat_param_d_value_l = 0
-                        if mat_param_d_struct_ptr_m != 0:
-                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_m)
-                            mat_param_d_value_m1 = readfloat(trmtr); mat_param_d_value_m2 = readfloat(trmtr); mat_param_d_value_m3 = readfloat(trmtr)
-                        else: mat_param_d_value_m1 = 0; mat_param_d_value_m2 = 0; mat_param_d_value_m3 = 0
-
-                        print(f"Flags #{z}: {mat_param_d_value_a} | {mat_param_d_value_b} | {mat_param_d_value_c} | {mat_param_d_value_d} | {mat_param_d_value_e} | {mat_param_d_value_f} | {mat_param_d_value_g} | {mat_param_d_value_h} | {mat_param_d_value_i} | {mat_param_d_value_j} | {mat_param_d_value_k} | {mat_param_d_value_l} | {mat_param_d_value_m1} | {mat_param_d_value_m2} | {mat_param_d_value_m3}")
-                        fseek(trmtr, mat_param_d_ret)
-
-                if mat_struct_ptr_param_e != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_e)
-                    mat_param_e_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_e_start)
-                    mat_param_e_count = readlong(trmtr)
-
-                    for z in range(mat_param_e_count):
-                        mat_param_e_offset = ftell(trmtr) + readlong(trmtr)
-                        mat_param_e_ret = ftell(trmtr)
-                        fseek(trmtr, mat_param_e_offset)
-                        mat_param_e_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_e_struct)
-                        mat_param_e_struct_len = readshort(trmtr)
-
-                        if mat_param_e_struct_len == 0x0006:
-                            mat_param_e_struct_section_len = readshort(trmtr)
-                            mat_param_e_struct_ptr_string = readshort(trmtr)
-                            mat_param_e_struct_ptr_value = 0
-                        elif mat_param_e_struct_len == 0x0008:
-                            mat_param_e_struct_section_len = readshort(trmtr)
-                            mat_param_e_struct_ptr_string = readshort(trmtr)
-                            mat_param_e_struct_ptr_value = readshort(trmtr)
-                        else:
-                            raise Exception(f"Unknown mat_param_e struct length!")
-
-                        if mat_param_e_struct_ptr_string != 0:
-                            fseek(trmtr, mat_param_e_offset + mat_param_e_struct_ptr_string)
-                            mat_param_e_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_e_string_start)
-                            mat_param_e_string_len = readlong(trmtr)
-                            mat_param_e_string = readfixedstring(trmtr, mat_param_e_string_len)
-
-                        if mat_param_e_struct_ptr_value != 0:
-                            fseek(trmtr, mat_param_e_offset + mat_param_e_struct_ptr_value)
-                            mat_param_e_value = readfloat(trmtr)
-                        else: mat_param_e_value = 0
-
-                        if mat_param_e_string == "Roughness": mat_rgh_layer0 = mat_param_e_value
-                        elif mat_param_e_string == "RoughnessLayer1": mat_rgh_layer1 = mat_param_e_value
-                        elif mat_param_e_string == "RoughnessLayer2": mat_rgh_layer2 = mat_param_e_value
-                        elif mat_param_e_string == "RoughnessLayer3": mat_rgh_layer3 = mat_param_e_value
-                        elif mat_param_e_string == "RoughnessLayer4": mat_rgh_layer4 = mat_param_e_value
-                        elif mat_param_e_string == "Metallic": mat_mtl_layer0 = mat_param_e_value
-                        elif mat_param_e_string == "MetallicLayer1": mat_mtl_layer1 = mat_param_e_value
-                        elif mat_param_e_string == "MetallicLayer2": mat_mtl_layer2 = mat_param_e_value
-                        elif mat_param_e_string == "MetallicLayer3": mat_mtl_layer3 = mat_param_e_value
-                        elif mat_param_e_string == "MetallicLayer4": mat_mtl_layer4 = mat_param_e_value
-                        elif mat_param_e_string == "Reflectance": mat_reflectance = mat_param_e_value
-                        elif mat_param_e_string == "EmissionIntensity": mat_emm_intensity = mat_param_e_value
-                        elif mat_param_e_string == "SSSMaskOffset": mat_sss_offset = mat_param_e_value
-                        print(f"(param_e) {mat_param_e_string}: {mat_param_e_value}")
-                        fseek(trmtr, mat_param_e_ret)
-
-                if mat_struct_ptr_param_f != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_f)
-                    mat_param_f_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_f_start)
-                    mat_param_f_count = readlong(trmtr)
-
-                    for z in range(mat_param_f_count):
-                        mat_param_f_offset = ftell(trmtr) + readlong(trmtr)
-                        mat_param_f_ret = ftell(trmtr)
-                        fseek(trmtr, mat_param_f_offset)
-                        mat_param_f_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_f_struct)
-                        mat_param_f_struct_len = readlong(trmtr)
-
-                        if mat_param_f_struct_len != 0x0008:
-                            raise Exception(f"Unknown mat_param_f struct length!")
-                        mat_param_f_struct_section_len = readshort(trmtr)
-                        mat_param_f_struct_ptr_string = readshort(trmtr)
-                        mat_param_f_struct_ptr_values = readshort(trmtr)
-
-                        if mat_param_f_struct_ptr_string != 0:
-                            fseek(trmtr, mat_param_f_offset + mat_param_f_struct_ptr_string)
-                            mat_param_f_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_f_string_start)
-                            mat_param_f_string_len = readlong(trmtr)
-                            mat_param_f_string = readfixedstring(trmtr, mat_param_f_string_len)
-
-                        if mat_param_f_struct_ptr_values != 0:
-                            fseek(trmtr, mat_param_f_offset + mat_param_f_struct_ptr_values)
-                            mat_param_f_value1 = readfloat(trmtr)
-                            mat_param_f_value2 = readfloat(trmtr)
-                        else: mat_param_f_value1 = mat_param_f_value2 = 0
-
-                        print(f"(param_f) {mat_param_f_string}: {mat_param_f_value1}, {mat_param_f_value2}")
-                        fseek(trmtr, mat_param_f_ret)
-
-                if mat_struct_ptr_param_g != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_g)
-                    mat_param_g_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_g_start)
-                    mat_param_g_count = readlong(trmtr)
-
-                    for z in range(mat_param_g_count):
-                        mat_param_g_offset = ftell(trmtr) + readlong(trmtr)
-                        mat_param_g_ret = ftell(trmtr)
-                        fseek(trmtr, mat_param_g_offset)
-                        mat_param_g_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_g_struct)
-                        mat_param_g_struct_len = readlong(trmtr)
-
-                        if mat_param_g_struct_len != 0x0008:
-                            raise Exception(f"Unknown mat_param_g struct length!")
-                        mat_param_g_struct_section_len = readshort(trmtr)
-                        mat_param_g_struct_ptr_string = readshort(trmtr)
-                        mat_param_g_struct_ptr_values = readshort(trmtr)
-
-                        if mat_param_g_struct_ptr_string != 0:
-                            fseek(trmtr, mat_param_g_offset + mat_param_g_struct_ptr_string)
-                            mat_param_g_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_g_string_start)
-                            mat_param_g_string_len = readlong(trmtr)
-                            mat_param_g_string = readfixedstring(trmtr, mat_param_g_string_len)
-
-                        if mat_param_g_struct_ptr_values != 0:
-                            fseek(trmtr, mat_param_g_offset + mat_param_g_struct_ptr_values)
-                            mat_param_g_value1 = readfloat(trmtr)
-                            mat_param_g_value2 = readfloat(trmtr)
-                            mat_param_g_value3 = readfloat(trmtr)
-                        else: mat_param_g_value1 = mat_param_g_value2 = mat_param_g_value3 = 0
-
-                        print(f"(param_g) {mat_param_g_string}: {mat_param_g_value1}, {mat_param_g_value2}, {mat_param_g_value3}")
-                        fseek(trmtr, mat_param_g_ret)
-
-                if mat_struct_ptr_param_h != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_h)
-                    mat_param_h_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_h_start)
-                    mat_param_h_count = readlong(trmtr)
-
-                    for z in range(mat_param_h_count):
-                        mat_param_h_offset = ftell(trmtr) + readlong(trmtr)
-                        mat_param_h_ret = ftell(trmtr)
-                        fseek(trmtr, mat_param_h_offset)
-                        mat_param_h_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_h_struct)
-                        mat_param_h_struct_len = readshort(trmtr)
-
-                        if mat_param_h_struct_len != 0x0008:
-                            raise Exception(f"Unknown mat_param_h struct length!")
-                        mat_param_h_struct_section_len = readshort(trmtr)
-                        mat_param_h_struct_ptr_string = readshort(trmtr)
-                        mat_param_h_struct_ptr_values = readshort(trmtr)
-
-                        if mat_param_h_struct_ptr_string != 0:
-                            fseek(trmtr, mat_param_h_offset + mat_param_h_struct_ptr_string)
-                            mat_param_h_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_h_string_start)
-                            mat_param_h_string_len = readlong(trmtr)
-                            mat_param_h_string = readfixedstring(trmtr, mat_param_h_string_len)
-
-                        if mat_param_h_struct_ptr_values != 0:
-                            fseek(trmtr, mat_param_h_offset + mat_param_h_struct_ptr_values)
-                            mat_param_h_value1 = readfloat(trmtr)
-                            mat_param_h_value2 = readfloat(trmtr)
-                            mat_param_h_value3 = readfloat(trmtr)
-                            mat_param_h_value4 = readfloat(trmtr)
-                        else: mat_param_h_value1 = mat_param_h_value2 = mat_param_h_value3 = mat_param_h_value4 = 0
-
-                        if mat_param_h_string == "UVScaleOffset": mat_uv_scale_u = mat_param_h_value1; mat_uv_scale_v = mat_param_h_value2; mat_uv_trs_u = mat_param_h_value3; mat_uv_trs_v = mat_param_h_value4
-                        elif mat_param_h_string == "UVScaleOffset1": mat_uv_scale2_u = mat_param_h_value1; mat_uv_scale2_v = mat_param_h_value2; mat_uv_trs2_u = mat_param_h_value3; mat_uv_trs2_v = mat_param_h_value4
-                        elif mat_param_h_string == "BaseColor": mat_color_r = mat_param_h_value1; mat_color_g = mat_param_h_value2; mat_color_b = mat_param_h_value3
-                        elif mat_param_h_string == "BaseColorLayer1": mat_color1_r = mat_param_h_value1; mat_color1_g = mat_param_h_value2; mat_color1_b = mat_param_h_value3
-                        elif mat_param_h_string == "BaseColorLayer2": mat_color2_r = mat_param_h_value1; mat_color2_g = mat_param_h_value2; mat_color2_b = mat_param_h_value3
-                        elif mat_param_h_string == "BaseColorLayer3": mat_color3_r = mat_param_h_value1; mat_color3_g = mat_param_h_value2; mat_color3_b = mat_param_h_value3
-                        elif mat_param_h_string == "BaseColorLayer4": mat_color4_r = mat_param_h_value1; mat_color4_g = mat_param_h_value2; mat_color4_b = mat_param_h_value3
-                        elif mat_param_h_string == "EmissionColorLayer1": mat_emcolor1_r = mat_param_h_value1; mat_emcolor1_g = mat_param_h_value2; mat_emcolor1_b = mat_param_h_value3
-                        elif mat_param_h_string == "EmissionColorLayer2": mat_emcolor2_r = mat_param_h_value1; mat_emcolor2_g = mat_param_h_value2; mat_emcolor2_b = mat_param_h_value3
-                        elif mat_param_h_string == "EmissionColorLayer3": mat_emcolor3_r = mat_param_h_value1; mat_emcolor3_g = mat_param_h_value2; mat_emcolor3_b = mat_param_h_value3
-                        elif mat_param_h_string == "EmissionColorLayer4": mat_emcolor4_r = mat_param_h_value1; mat_emcolor4_g = mat_param_h_value2; mat_emcolor4_b = mat_param_h_value3
-                        elif mat_param_h_string == "EmissionColorLayer5": mat_emcolor5_r = mat_param_h_value1; mat_emcolor5_g = mat_param_h_value2; mat_emcolor5_b = mat_param_h_value3
-                        elif mat_param_h_string == "SubsurfaceColor":  mat_ssscolor_r = mat_param_h_value1; mat_ssscolor_g = mat_param_h_value2; mat_ssscolor_b = mat_param_h_value3
-                        else: print(f"Unknown mat_param_h: {mat_param_h_string}")
-
-                        print(f"(param_h) {mat_param_h_string}: {mat_param_h_value1}, {mat_param_h_value2}, {mat_param_h_value3}, {mat_param_h_value4}")
-                        fseek(trmtr, mat_param_h_ret)
-
-                if mat_struct_ptr_param_i != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_i)
-                    mat_param_i_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_i_start)
-                    mat_param_i_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_i_struct)
-                    mat_param_i_struct_len = readlong(trmtr)
-
-                    if mat_param_i_struct_len != 0x0000:
-                        raise Exception(f"Unknown mat_param_i struct length!")
-
-                if mat_struct_ptr_param_j != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_j)
-                    mat_param_j_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_j_start)
-                    mat_param_j_count = readlong(trmtr)
-
-                    for y in range(mat_param_j_count):
-                        mat_param_j_offset = ftell(trmtr) + readlong(trmtr)
-                        mat_param_j_ret = ftell(trmtr)
-                        fseek(trmtr, mat_param_j_offset)
-                        mat_param_j_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_j_struct)
-                        mat_param_j_struct_len = readshort(trmtr)
-
-                        if mat_param_j_struct_len == 0x0006:
-                            mat_param_j_struct_section_len = readshort(trmtr)
-                            mat_param_j_struct_ptr_string = readshort(trmtr)
-                            mat_param_j_struct_ptr_value = 0
-                        elif mat_param_j_struct_len == 0x0008:
-                            mat_param_j_struct_section_len = readshort(trmtr)
-                            mat_param_j_struct_ptr_string = readshort(trmtr)
-                            mat_param_j_struct_ptr_value = readshort(trmtr)
-                        else:
-                            raise Exception(f"Unknown mat_param_j struct length!")
-
-                        if mat_param_j_struct_ptr_string != 0:
-                            fseek(trmtr, mat_param_j_offset + mat_param_j_struct_ptr_string)
-                            mat_param_j_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_j_string_start)
-                            mat_param_j_string_len = readlong(trmtr)
-                            mat_param_j_string = readfixedstring(trmtr, mat_param_j_string_len)
-
-                        if mat_param_j_struct_ptr_value != 0:
-                            fseek(trmtr, mat_param_j_offset + mat_param_j_struct_ptr_value)
-                            mat_param_j_value = readlong(trmtr)
-                        else: mat_param_j_value = "0" # why is this a string?
-
-                        print(f"(param_j) {mat_param_j_string}: {mat_param_j_value}")
-                        fseek(trmtr, mat_param_j_ret)
-
-                if mat_struct_ptr_param_k != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_k)
-                    mat_param_k_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_k_start)
-                    mat_param_k_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_k_struct)
-                    mat_param_k_struct_len = readlong(trmtr)
-
-                    if mat_param_k_struct_len != 0x0000:
-                        raise Exception(f"Unexpected mat_param_k struct length!")
-
-                if mat_struct_ptr_param_l != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_l)
-                    mat_param_l_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_l_start)
-                    mat_param_l_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_l_struct)
-                    mat_param_l_struct_len = readlong(trmtr)
-
-                    if mat_param_l_struct_len != 0x0000:
-                        raise Exception(f"Unexpected mat_param_l struct length!")
-
-                if mat_struct_ptr_param_m != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_m)
-                    mat_param_m_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_m_start)
-                    mat_param_m_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_m_struct)
-                    mat_param_m_struct_len = readlong(trmtr)
-
-                    if mat_param_m_struct_len != 0x0000:
-                        raise Exception(f"Unexpected mat_param_m struct length!")
-
-                if mat_struct_ptr_param_n != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_n)
-                    mat_param_n_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_n_start)
-                    mat_param_n_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_n_struct)
-                    mat_param_n_struct_len = readshort(trmtr)
-
-                    if mat_param_n_struct_len == 0x0004:
-                        mat_param_n_struct_section_len = readshort(trmtr)
-                        mat_param_n_struct_unk = 0
-                    elif mat_param_n_struct_len == 0x0006:
-                        mat_param_n_struct_section_len = readshort(trmtr)
-                        mat_param_n_struct_unk = readshort(trmtr)
-                    else:
-                        raise Exception(f"Unexpected mat_param_n struct length!")
-
-                    if mat_param_n_struct_unk != 0:
-                        fseek(trmtr, mat_param_n_start + mat_param_n_struct_unk)
-                        mat_param_n_value =  readbyte(trmtr)
-                        print(f"Unknown value A = {mat_param_n_value}")
-
-                if mat_struct_ptr_param_o != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_o)
-                    mat_param_o_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_o_start)
-                    mat_param_o_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_o_struct)
-                    mat_param_o_struct_len = readshort(trmtr)
-
-                    if mat_param_o_struct_len == 0x0004:
-                        mat_param_o_struct_section_len = readshort(trmtr)
-                        mat_param_o_struct_unk = 0
-                        mat_param_o_struct_value = 0
-                    elif mat_param_o_struct_len == 0x0008:
-                        mat_param_o_struct_section_len = readshort(trmtr)
-                        mat_param_o_struct_unk = readshort(trmtr)
-                        mat_param_o_struct_value = readshort(trmtr)
-                    else:
-                        raise Exception(f"Unexpected mat_param_o struct length!")
-
-                    if mat_param_o_struct_unk != 0:
-                        fseek(trmtr, mat_param_o_start + mat_param_o_struct_unk)
-                        mat_param_o_value =  readbyte(trmtr)
-                        print(f"Unknown value B = {mat_param_o_value}")
-
-                if mat_struct_ptr_param_p != 0:
-                    fseek(trmtr, mat_offset + mat_struct_ptr_param_p)
-                    mat_param_p_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_p_start)
-                    mat_param_p_string_len = readlong(trmtr)
-                    mat_param_p_string = readfixedstring(trmtr, mat_param_p_string_len)
-                    print(mat_param_p_string)
-
-                mat_data_array.append({
-                    "mat_name": mat_name,
-                    "mat_shader": mat_shader,
-                    "mat_col0": mat_col0,
-                    "mat_lym0": mat_lym0,
-                    "mat_nrm0": mat_nrm0,
-                    "mat_ao0": mat_ao0,
-                    "mat_emi0": mat_emi0,
-                    "mat_rgh0": mat_rgh0,
-                    "mat_mtl0": mat_mtl0,
-                    "mat_msk0": mat_msk0,
-                    "mat_highmsk0": mat_highmsk0,
-                    "mat_sssmask0": mat_sssmask0,
-                    "mat_color_r": mat_color_r, "mat_color_g": mat_color_g, "mat_color_b": mat_color_b,
-                    "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b,
-                    "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b,
-                    "mat_color3_r": mat_color3_r, "mat_color3_g": mat_color3_g, "mat_color3_b": mat_color3_b,
-                    "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b,
-                    "mat_emcolor1_r": mat_emcolor1_r, "mat_emcolor1_g": mat_emcolor1_g, "mat_emcolor1_b": mat_emcolor1_b,
-                    "mat_emcolor2_r": mat_emcolor2_r, "mat_emcolor2_g": mat_emcolor2_g, "mat_emcolor2_b": mat_emcolor2_b,
-                    "mat_emcolor3_r": mat_emcolor3_r, "mat_emcolor3_g": mat_emcolor3_g, "mat_emcolor3_b": mat_emcolor3_b,
-                    "mat_emcolor4_r": mat_emcolor4_r, "mat_emcolor4_g": mat_emcolor4_g, "mat_emcolor4_b": mat_emcolor4_b,
-                    "mat_emcolor5_r": mat_emcolor5_r, "mat_emcolor5_g": mat_emcolor5_g, "mat_emcolor5_b": mat_emcolor5_b,
-                    "mat_ssscolor_r": mat_ssscolor_r, "mat_ssscolor_g": mat_ssscolor_g, "mat_ssscolor_b": mat_ssscolor_b,
-                    "mat_rgh_layer0": mat_rgh_layer0, "mat_rgh_layer1": mat_rgh_layer1, "mat_rgh_layer2": mat_rgh_layer2, "mat_rgh_layer3": mat_rgh_layer3, "mat_rgh_layer4": mat_rgh_layer4,
-                    "mat_mtl_layer0": mat_mtl_layer0, "mat_mtl_layer1": mat_mtl_layer1, "mat_mtl_layer2": mat_mtl_layer2, "mat_mtl_layer3": mat_mtl_layer3, "mat_mtl_layer4": mat_mtl_layer4,
-                    "mat_reflectance": mat_reflectance,
-                    "mat_emm_intensity": mat_emm_intensity,
-                    "mat_sss_offset": mat_sss_offset,
-                    "mat_uv_scale_u": mat_uv_scale_u, "mat_uv_scale_v": mat_uv_scale_v,
-                    "mat_uv_scale2_u": mat_uv_scale2_u, "mat_uv_scale2_v": mat_uv_scale2_v,
-                    "mat_enable_base_color_map": mat_enable_base_color_map,
-                    "mat_enable_normal_map": mat_enable_normal_map,
-                    "mat_enable_ao_map": mat_enable_ao_map,
-                    "mat_enable_emission_color_map": mat_enable_emission_color_map,
-                    "mat_enable_roughness_map": mat_enable_roughness_map,
-                    "mat_enable_metallic_map": mat_enable_metallic_map,
-                    "mat_enable_displacement_map": mat_enable_displacement_map,
-                    "mat_enable_highlight_map": mat_enable_highlight_map,
-                    "mat_num_material_layer": mat_num_material_layer
-                })
-                fseek(trmtr, mat_ret)
-            print("--------------------")
+    except Exception as e:
+        print("failed loading trskl", e)
+        
+    if trmtr_path is not None:
+        with open(trmtr_path, "rb") as f:
+            trmtr_bytes = f.read()
+        trmtr2 = TRMTR.TRMTR.GetRootAsTRMTR(trmtr_bytes, 0)
+
+        mat_count = trmtr2.MaterialsLength()
+        for x in range(mat_count):
+            mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = "";mat_loweyemsk0 = "";mat_uppeyemsk0 = ""
+            mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0.0; mat_uv_trs_v = 0.0
+            mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0.0; mat_uv_trs2_v = 0.0
+            mat_uvcenter0_x = 0.0;mat_uvcenter0_y = 0.0
+            mat_color_r = 1.0; mat_color_g = 1.0; mat_color_b = 1.0
+            mat_color1_r = 1.0; mat_color1_g = 1.0; mat_color1_b = 1.0
+            mat_color2_r = 1.0; mat_color2_g = 1.0; mat_color2_b = 1.0
+            mat_color3_r = 1.0; mat_color3_g = 1.0; mat_color3_b = 1.0
+            mat_color4_r = 1.0; mat_color4_g = 1.0; mat_color4_b = 1.0
+            #Need to figure out what does the others BaseColorLayer8 its related to LowerEyelidColor
+            mat_color8_r = 1.0; mat_color8_g = 1.0; mat_color8_b = 1.0
+
+            mat_emcolor1_r = 0.0; mat_emcolor1_g = 0.0; mat_emcolor1_b = 0.0
+            mat_emcolor2_r = 0.0; mat_emcolor2_g = 0.0; mat_emcolor2_b = 0.0
+            mat_emcolor3_r = 0.0; mat_emcolor3_g = 0.0; mat_emcolor3_b = 0.0
+            mat_emcolor4_r = 0.0; mat_emcolor4_g = 0.0; mat_emcolor4_b = 0.0
+            mat_emcolor5_r = 0.0; mat_emcolor5_g = 0.0; mat_emcolor5_b = 0.0
+            mat_ssscolor_r = 0.0; mat_ssscolor_g = 0.0; mat_ssscolor_b = 0.0
+            mat_rgh_layer0 = 1.0; mat_rgh_layer1 = 1.0; mat_rgh_layer2 = 1.0; mat_rgh_layer3 = 1.0; mat_rgh_layer4 = 1.0
+            mat_mtl_layer0 = 0.0; mat_mtl_layer1 = 0.0; mat_mtl_layer2 = 0.0; mat_mtl_layer3 = 0.0; mat_mtl_layer4 = 0.0
+            mat_rgh_value = 0.5
+            mat_reflectance = 0.0
+            mat_emm_intensity = 1.0
+            mat_emm_intensity1 = 0.0
+            mat_emm_intensity2 = 0.0
+            mat_emm_intensity3 = 0.0
+            mat_emm_intensity4 = 0.0
+            mat_sss_offset = 0.0
+            mat_metallic = 0.0
+            mat_lym_scale1 = 1.0; mat_lym_scale2 = 1.0; mat_lym_scale3 = 1.0; mat_lym_scale4 = 1.0
+            mat_basecolor_index1 = -1; mat_basecolor_index2 = -1; mat_basecolor_index3 = -1; mat_basecolor_index4 = -1; mat_basecolor_index5 = -1; mat_basecolor_index6 = -1; mat_basecolor_index7 = -1; mat_basecolor_index8 = -1; mat_basecolor_index9 = -1; mat_basecolor_index10 = -1; mat_basecolor_index11 = -1; mat_basecolor_index12 = -1; mat_basecolor_index13 = -1; mat_basecolor_index14 = -1; mat_basecolor_index15 = -1; mat_basecolor_index16 = -1; mat_basecolor_index17 = -1; mat_basecolor_index18 = -1; mat_basecolor_index19 = -1; mat_basecolor_index20 = -1; mat_basecolor_index21 = -1; mat_basecolor_index22 = -1; mat_basecolor_index23 = -1; mat_basecolor_index24 = -1; mat_basecolor_index25 = -1; mat_basecolor_index26 = -1; mat_basecolor_index27 = -1; mat_basecolor_index28 = -1; mat_basecolor_index29 = -1; mat_basecolor_index30 = -1; mat_basecolor_index31 = -1; mat_basecolor_index32 = -1; mat_basecolor_index33 = -1; mat_basecolor_index34 = -1; mat_basecolor_index35 = -1; mat_basecolor_index36 = -1; mat_basecolor_index37 = -1; mat_basecolor_index38 = -1; mat_basecolor_index39 = -1; mat_basecolor_index40 = -1; mat_colortabledividenumber = -1; mat_colortable_tex = ""; mat_enablecolortablemap = False
+            mat_alpha_setting = ""
+
+            mat_enable_base_color_map = False
+            mat_enable_normal_map = False
+            mat_enable_ao_map = False
+            mat_enable_emission_color_map = False
+            mat_enable_roughness_map = False
+            mat_enable_metallic_map = False
+            mat_enable_displacement_map = False
+            mat_enable_highlight_map = False
+            mat_base_color_multiply = True
+            mat_num_material_layer = 0
+            mat_eyelid_type = ""
+            mat_fb = trmtr2.Materials(x)
+
+            mat_name = mat_fb.Name().decode("utf-8") if mat_fb.Name() else ""
+
+            shaders = []
+            for s in range(mat_fb.ShadersLength()):
+                shader_fb = mat_fb.Shaders(s)
+                shader_name = shader_fb.ShaderName().decode("utf-8") if shader_fb.ShaderName() else ""
+                shader_values = []
+                for v in range(shader_fb.ShaderValuesLength()):
+                    val_fb = shader_fb.ShaderValues(v)
+                    name = val_fb.StringName().decode("utf-8")
+                    value = val_fb.StringValue().decode("utf-8")
+                    shader_values.append({"name": name, "value": value})
+                    
+                    if name == "EnableBaseColorMap": mat_enable_base_color_map = value == "True"
+                    if name == "EnableNormalMap": mat_enable_normal_map = value == "True"
+                    if name == "EnableAOMap": mat_enable_ao_map = value == "True"
+                    if name == "EnableEmissionColorMap": mat_enable_emission_color_map = value == "True"
+                    if name == "EnableRoughnessMap": mat_enable_roughness_map = value == "True"
+                    if name == "EnableMetallicMap": mat_enable_metallic_map = value == "True"
+                    if name == "EnableDisplacementMap": mat_enable_displacement_map = value == "True"
+                    if name == "EnableHighlight": mat_enable_highlight_map = value == "True"
+                    if name == "BaseColorMultiply": mat_base_color_multiply = value
+                    if name == "NumMaterialLayer": mat_num_material_layer = int(value)
+                    if name == "EyelidType": mat_eyelid_type = value
+                    if name == "EnableColorTableMap": mat_enablecolortablemap = value
+                    
+                if shader_name: mat_shader = shader_name
+                shaders.append({"shader_name": shader_name, "shader_values": shader_values})
+
+            textures = []
+            for t in range(mat_fb.TexturesLength()):
+                tex_fb = mat_fb.Textures(t)
+                texture_name = tex_fb.TextureName().decode("utf-8")
+                texture_file = tex_fb.TextureFile().decode("utf-8")
+                textures.append({"texture_name": texture_name, "texture_file": texture_file})
+                
+                if texture_name == "BaseColorMap": mat_col0 = texture_file
+                if texture_name == "LayerMaskMap": mat_lym0 = texture_file
+                if texture_name == "NormalMap": mat_nrm0 = texture_file
+                if texture_name == "AOMap": mat_ao0 = texture_file
+                if texture_name == "EmissionColorMap": mat_emi0 = texture_file
+                if texture_name == "RoughnessMap": mat_rgh0 = texture_file
+                if texture_name == "MetallicMap": mat_mtl0 = texture_file
+                if texture_name == "DisplacementMap": mat_msk0 = texture_file
+                if texture_name == "HighlightMaskMap": mat_highmsk0 = texture_file
+                if texture_name == "LowerEyelidColorMap": mat_loweyemsk0 = texture_file
+                if texture_name == "UpperEyelidColorMap": mat_uppeyemsk0 = texture_file
+                if texture_name == "SSSMaskMap": mat_sssmask0 = texture_file
+                if texture_name == "ColorTableMap": mat_colortable_tex = texture_file
+
+            for f in range(mat_fb.FloatParameterLength()):
+                fparam = mat_fb.FloatParameter(f)
+                name = fparam.FloatName().decode("utf-8")
+                value = fparam.FloatValue()
+                if name == "Roughness": mat_rgh_value = value
+                elif name == "Reflectance": mat_reflectance = value
+                elif name == "EmissionIntensity": mat_emm_intensity = value
+                elif name == "EmissionIntensityLayer1": mat_emm_intensity1 = value
+                elif name == "EmissionIntensityLayer2": mat_emm_intensity2 = value
+                elif name == "EmissionIntensityLayer3": mat_emm_intensity3 = value
+                elif name == "EmissionIntensityLayer4": mat_emm_intensity4 = value
+                elif name == "LayerMaskScale1": mat_lym_scale1 = value
+                elif name == "LayerMaskScale2": mat_lym_scale2 = value
+                elif name == "LayerMaskScale3": mat_lym_scale3 = value
+                elif name == "LayerMaskScale4": mat_lym_scale4 = value
+                elif name == "Metallic": mat_metallic = value
+            for f in range(mat_fb.IntParameterLength()):
+                fparam = mat_fb.IntParameter(f)
+                name = fparam.IntName().decode("utf-8")
+                value = fparam.IntValue()
+                if name == "ColorTableDivideNumber": mat_colortabledividenumber = value
+                elif name == "BaseColorIndex1": mat_basecolor_index1 = value
+                elif name == "BaseColorIndex2": mat_basecolor_index2 = value
+                elif name == "BaseColorIndex3": mat_basecolor_index3 = value
+                elif name == "BaseColorIndex4": mat_basecolor_index4 = value
+                elif name == "BaseColorIndex5": mat_basecolor_index5 = value
+                elif name == "BaseColorIndex6": mat_basecolor_index6 = value
+                elif name == "BaseColorIndex7": mat_basecolor_index7 = value
+                elif name == "BaseColorIndex8": mat_basecolor_index8 = value
+                elif name == "BaseColorIndex9": mat_basecolor_index9 = value
+                elif name == "BaseColorIndex10": mat_basecolor_index10 = value
+                elif name == "BaseColorIndex11": mat_basecolor_index11 = value
+                elif name == "BaseColorIndex12": mat_basecolor_index12 = value
+                elif name == "BaseColorIndex13": mat_basecolor_index13 = value
+                elif name == "BaseColorIndex14": mat_basecolor_index14 = value
+                elif name == "BaseColorIndex15": mat_basecolor_index15 = value
+                elif name == "BaseColorIndex16": mat_basecolor_index16 = value
+                elif name == "BaseColorIndex17": mat_basecolor_index17 = value
+                elif name == "BaseColorIndex18": mat_basecolor_index18 = value
+                elif name == "BaseColorIndex19": mat_basecolor_index19 = value
+                elif name == "BaseColorIndex20": mat_basecolor_index20 = value
+                elif name == "BaseColorIndex21": mat_basecolor_index21 = value
+                elif name == "BaseColorIndex22": mat_basecolor_index22 = value
+                elif name == "BaseColorIndex23": mat_basecolor_index23 = value
+                elif name == "BaseColorIndex24": mat_basecolor_index24 = value
+                elif name == "BaseColorIndex25": mat_basecolor_index25 = value
+                elif name == "BaseColorIndex26": mat_basecolor_index26 = value
+                elif name == "BaseColorIndex27": mat_basecolor_index27 = value
+                elif name == "BaseColorIndex28": mat_basecolor_index28 = value
+                elif name == "BaseColorIndex29": mat_basecolor_index29 = value
+                elif name == "BaseColorIndex30": mat_basecolor_index30 = value
+                elif name == "BaseColorIndex31": mat_basecolor_index31 = value
+                elif name == "BaseColorIndex32": mat_basecolor_index32 = value
+                elif name == "BaseColorIndex33": mat_basecolor_index33 = value
+                elif name == "BaseColorIndex34": mat_basecolor_index34 = value
+                elif name == "BaseColorIndex35": mat_basecolor_index35 = value
+                elif name == "BaseColorIndex36": mat_basecolor_index36 = value
+                elif name == "BaseColorIndex37": mat_basecolor_index37 = value
+                elif name == "BaseColorIndex38": mat_basecolor_index38 = value
+                elif name == "BaseColorIndex39": mat_basecolor_index39 = value
+                elif name == "BaseColorIndex40": mat_basecolor_index40 = value
+            for f in range(mat_fb.Float4ParameterLength()):
+                fparam = mat_fb.Float4Parameter(f)
+                name = fparam.ColorName().decode("utf-8")
+                color = fparam.ColorValue()
+                if name == "BaseColor":  mat_color_r, mat_color_g, mat_color_b = color.R(), color.G(), color.B()
+                elif name == "BaseColorLayer1": mat_color1_r, mat_color1_g, mat_color1_b = color.R(), color.G(), color.B()
+                elif name == "BaseColorLayer2":  mat_color2_r, mat_color2_g, mat_color2_b = color.R(), color.G(), color.B()
+                elif name == "BaseColorLayer3": mat_color3_r, mat_color3_g, mat_color3_b = color.R(), color.G(), color.B()
+                elif name == "BaseColorLayer4": mat_color4_r, mat_color4_g, mat_color4_b = color.R(), color.G(), color.B()
+                elif name == "BaseColorLayer8": mat_color8_r, mat_color8_g, mat_color8_b = color.R(), color.G(), color.B()
+                elif name == "EmissionColorLayer1": mat_emcolor1_r, mat_emcolor1_g, mat_emcolor1_b = color.R(), color.G(), color.B()
+                elif name == "EmissionColorLayer2": mat_emcolor2_r, mat_emcolor2_g, mat_emcolor2_b = color.R(), color.G(), color.B()
+                elif name == "EmissionColorLayer3": mat_emcolor3_r, mat_emcolor3_g, mat_emcolor3_b = color.R(), color.G(), color.B()
+                elif name == "EmissionColorLayer4": mat_emcolor4_r, mat_emcolor4_g, mat_emcolor4_b = color.R(), color.G(), color.B()
+                elif name == "EmissionColorLayer5": mat_emcolor5_r, mat_emcolor5_g, mat_emcolor5_b = color.R(), color.G(), color.B()
+                elif name == "SubsurfaceColor": mat_ssscolor_r, mat_ssscolor_g, mat_ssscolor_b = color.R(), color.G(), color.B()
+                elif name == "UVScaleOffset":
+                    mat_uv_scale_u = color.R()
+                    mat_uv_scale_v = color.G()
+                elif name == "UVScaleOffset1":
+                    mat_uv_scale2_u = color.R()
+                    mat_uv_scale2_v = color.G()
+                elif name == "UVCenter0":
+                    mat_uvcenter0_x = color.R()
+                    mat_uvcenter0_y = color.G()
+                    
+            mat_alpha_setting = mat_fb.AlphaType().decode("utf-8") if mat_fb.AlphaType() else ""
+
+            mat_data_array.append({
+                "mat_name": mat_name,
+                "mat_shader": mat_shader,
+                "mat_col0": mat_col0,
+                "mat_lym0": mat_lym0,
+                "mat_nrm0": mat_nrm0,
+                "mat_ao0": mat_ao0,
+                "mat_emi0": mat_emi0,
+                "mat_rgh0": mat_rgh0,
+                "mat_mtl0": mat_mtl0,
+                "mat_msk0": mat_msk0,
+                "mat_highmsk0": mat_highmsk0,
+                "mat_sssmask0": mat_sssmask0,
+                "mat_loweyemsk0": mat_loweyemsk0,
+                "mat_uppeyemsk0": mat_uppeyemsk0,
+                "mat_eyelid_type": mat_eyelid_type,
+                "mat_uvcenter0_x": mat_uvcenter0_x,
+                "mat_uvcenter0_y": mat_uvcenter0_y,
+                "mat_color_r": mat_color_r, "mat_color_g": mat_color_g, "mat_color_b": mat_color_b,
+                "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b,
+                "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b,
+                "mat_color3_r": mat_color3_r, "mat_color3_g": mat_color3_g, "mat_color3_b": mat_color3_b,
+                "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b,
+                "mat_color8_r": mat_color8_r, "mat_color8_g": mat_color8_g, "mat_color8_b": mat_color8_b,
+                "mat_emcolor1_r": mat_emcolor1_r, "mat_emcolor1_g": mat_emcolor1_g, "mat_emcolor1_b": mat_emcolor1_b,
+                "mat_emcolor2_r": mat_emcolor2_r, "mat_emcolor2_g": mat_emcolor2_g, "mat_emcolor2_b": mat_emcolor2_b,
+                "mat_emcolor3_r": mat_emcolor3_r, "mat_emcolor3_g": mat_emcolor3_g, "mat_emcolor3_b": mat_emcolor3_b,
+                "mat_emcolor4_r": mat_emcolor4_r, "mat_emcolor4_g": mat_emcolor4_g, "mat_emcolor4_b": mat_emcolor4_b,
+                "mat_emcolor5_r": mat_emcolor5_r, "mat_emcolor5_g": mat_emcolor5_g, "mat_emcolor5_b": mat_emcolor5_b,
+                "mat_ssscolor_r": mat_ssscolor_r, "mat_ssscolor_g": mat_ssscolor_g, "mat_ssscolor_b": mat_ssscolor_b,
+                "mat_rgh_layer0": mat_rgh_layer0, "mat_rgh_layer1": mat_rgh_layer1, "mat_rgh_layer2": mat_rgh_layer2, "mat_rgh_layer3": mat_rgh_layer3, "mat_rgh_layer4": mat_rgh_layer4,
+                "mat_mtl_layer0": mat_mtl_layer0, "mat_mtl_layer1": mat_mtl_layer1, "mat_mtl_layer2": mat_mtl_layer2, "mat_mtl_layer3": mat_mtl_layer3, "mat_mtl_layer4": mat_mtl_layer4,
+                "mat_reflectance": mat_reflectance,
+                "mat_rgh_value": mat_rgh_value,
+                "mat_emm_intensity": mat_emm_intensity,
+                "mat_emm_intensity1": mat_emm_intensity1,
+                "mat_emm_intensity2": mat_emm_intensity2,
+                "mat_emm_intensity3": mat_emm_intensity3,
+                "mat_emm_intensity4": mat_emm_intensity4,
+                "mat_sss_offset": mat_sss_offset,
+                "mat_uv_scale_u": mat_uv_scale_u, "mat_uv_scale_v": mat_uv_scale_v,
+                "mat_uv_trs_u": mat_uv_trs_u, "mat_uv_trs_v": mat_uv_trs_v,
+                "mat_uv_scale2_u": mat_uv_scale2_u, "mat_uv_scale2_v": mat_uv_scale2_v,
+                "mat_uv_trs2_u": mat_uv_trs2_u, "mat_uv_trs2_v": mat_uv_trs2_v,
+                "mat_enable_base_color_map": mat_enable_base_color_map,
+                "mat_enable_normal_map": mat_enable_normal_map,
+                "mat_base_color_multiply": mat_base_color_multiply,
+                "mat_enable_ao_map": mat_enable_ao_map,
+                "mat_enable_emission_color_map": mat_enable_emission_color_map,
+                "mat_enable_roughness_map": mat_enable_roughness_map,
+                "mat_enable_metallic_map": mat_enable_metallic_map,
+                "mat_enable_displacement_map": mat_enable_displacement_map,
+                "mat_enable_highlight_map": mat_enable_highlight_map,
+                "mat_num_material_layer": mat_num_material_layer,
+                "mat_lym_scale1": mat_lym_scale1,
+                "mat_lym_scale2": mat_lym_scale2,
+                "mat_lym_scale3": mat_lym_scale3,
+                "mat_lym_scale4": mat_lym_scale4,
+                "mat_enablecolortablemap": mat_enablecolortablemap,
+                "mat_colortable_tex": mat_colortable_tex,
+                "mat_colortabledividenumber": mat_colortabledividenumber,
+                "mat_basecolor_index1": mat_basecolor_index1,
+                "mat_basecolor_index2": mat_basecolor_index2,
+                "mat_basecolor_index3": mat_basecolor_index3,
+                "mat_basecolor_index4": mat_basecolor_index4,
+                "mat_basecolor_index5": mat_basecolor_index5,
+                "mat_basecolor_index6": mat_basecolor_index6,
+                "mat_basecolor_index7": mat_basecolor_index7,
+                "mat_basecolor_index8": mat_basecolor_index8,
+                "mat_basecolor_index9": mat_basecolor_index9,
+                "mat_basecolor_index10": mat_basecolor_index10,
+                "mat_basecolor_index11": mat_basecolor_index11,
+                "mat_basecolor_index12": mat_basecolor_index12,
+                "mat_basecolor_index13": mat_basecolor_index13,
+                "mat_basecolor_index14": mat_basecolor_index14,
+                "mat_basecolor_index15": mat_basecolor_index15,
+                "mat_basecolor_index16": mat_basecolor_index16,
+                "mat_basecolor_index17": mat_basecolor_index17,
+                "mat_basecolor_index18": mat_basecolor_index18,
+                "mat_basecolor_index19": mat_basecolor_index19,
+                "mat_basecolor_index20": mat_basecolor_index20,
+                "mat_basecolor_index21": mat_basecolor_index21,
+                "mat_basecolor_index22": mat_basecolor_index22,
+                "mat_basecolor_index23": mat_basecolor_index23,
+                "mat_basecolor_index24": mat_basecolor_index24,
+                "mat_basecolor_index25": mat_basecolor_index25,
+                "mat_basecolor_index26": mat_basecolor_index26,
+                "mat_basecolor_index27": mat_basecolor_index27,
+                "mat_basecolor_index28": mat_basecolor_index28,
+                "mat_basecolor_index29": mat_basecolor_index29,
+                "mat_basecolor_index30": mat_basecolor_index30,
+                "mat_basecolor_index31": mat_basecolor_index31,
+                "mat_basecolor_index32": mat_basecolor_index32,
+                "mat_basecolor_index33": mat_basecolor_index33,
+                "mat_basecolor_index34": mat_basecolor_index34,
+                "mat_basecolor_index35": mat_basecolor_index35,
+                "mat_basecolor_index36": mat_basecolor_index36,
+                "mat_basecolor_index37": mat_basecolor_index37,
+                "mat_basecolor_index38": mat_basecolor_index38,
+                "mat_basecolor_index39": mat_basecolor_index39,
+                "mat_basecolor_index40": mat_basecolor_index40,
+                "mat_alpha_setting": mat_alpha_setting,
+                "mat_metallic": mat_metallic
+            })
         mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
-
-        fclose(trmtr)
         
         if IN_BLENDER_ENV:
-            addons_path = bpy.utils.user_resource('SCRIPTS')
-
             if not 'ScViShader' in bpy.data.materials or not 'ScViShader' in bpy.data.materials:
+                blend_path = os.path.join(os.path.dirname(__file__), "SCVIShader.blend")
                 try:
-                    shader_dir = os.path.join(addons_path, "addons")
-                    os.makedirs(shader_dir, exist_ok=True)
-                    blend_path = os.path.join(shader_dir, "SCVIShader.blend")
                     response = requests.get("https://raw.githubusercontent.com/ChicoEevee/Pokemon-Switch-V2-Model-Importer-Blender/master/SCVIShader.blend", stream=True)
                     with open(blend_path, 'wb') as file:
                         file.write(response.content)
@@ -957,7 +630,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                     data_to.materials = data_from.materials
                     print('! Loaded shader blend file.')
             for m, mat in enumerate(mat_data_array):
-                if "eye" in mat["mat_name"] and "pm" in trmtr.name:
+                if "eye" in mat["mat_name"] and "pm" in trmtr_name:
                     material = bpy.data.materials["ScViMonEyeShader"].copy()
                 else:
                     material = bpy.data.materials["ScViShader"].copy()
@@ -965,10 +638,15 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                 material.name = mat["mat_name"]
                 materials.append(material)
                 shadegroupnodes = material.node_tree.nodes['Group']
+                basecolor = (mat["mat_color_r"], mat["mat_color_g"], mat["mat_color_b"], 1.0)
                 try:
                     shadegroupnodes.inputs['BaseColor'].default_value = (mat["mat_color_r"], mat["mat_color_g"], mat["mat_color_b"], 1.0)
+                    if basecolor == (1.0, 1.0, 1.0, 1.0) and "sh_white_msk" in mat["mat_col0"]:
+                        shadegroupnodes.inputs['BaseColor'].default_value = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 except:
                     print("")
+
+
                 if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)) == True:
                     lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
@@ -978,9 +656,12 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                 color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
                 color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
                 color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
+                color8 = (mat["mat_color8_r"], mat["mat_color8_g"], mat["mat_color8_b"], 1.0)
+                if "eye" in mat["mat_name"] and "pm" in trmtr_name:
+                    shadegroupnodes.inputs['LowEye_color'].default_value = color8
                 emcolor1 = (mat["mat_emcolor1_r"], mat["mat_emcolor1_g"], mat["mat_emcolor1_b"], 1.0)
                 emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
-                emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)                   
+                emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)
                 emcolor4 = (mat["mat_emcolor4_r"], mat["mat_emcolor4_g"], mat["mat_emcolor4_b"], 1.0)
                 shadegroupnodes.inputs['BaseColorLayer1'].default_value = color1
                 shadegroupnodes.inputs['BaseColorLayer2'].default_value = color2
@@ -990,40 +671,157 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                 shadegroupnodes.inputs['EmissionColorLayer2'].default_value = emcolor2
                 shadegroupnodes.inputs['EmissionColorLayer3'].default_value = emcolor3
                 shadegroupnodes.inputs['EmissionColorLayer4'].default_value = emcolor4
+                shadegroupnodes.inputs['Roughness'].default_value = mat["mat_rgh_value"]
+                shadegroupnodes.inputs['Metallic'].default_value = mat["mat_metallic"]
+                shadegroupnodes.inputs['EmissionStrength'].default_value = mat["mat_emm_intensity"]
+                shadegroupnodes.inputs['EmissionIntensityLayer1'].default_value = mat["mat_emm_intensity1"]
+                shadegroupnodes.inputs['EmissionIntensityLayer2'].default_value = mat["mat_emm_intensity2"]
+                shadegroupnodes.inputs['EmissionIntensityLayer3'].default_value = mat["mat_emm_intensity3"]
+                shadegroupnodes.inputs['EmissionIntensityLayer4'].default_value = mat["mat_emm_intensity4"]
+                shadegroupnodes.inputs['LymScale1'].default_value = mat["mat_lym_scale1"]
+                shadegroupnodes.inputs['LymScale2'].default_value = mat["mat_lym_scale2"]
+                shadegroupnodes.inputs['LymScale3'].default_value = mat["mat_lym_scale3"]
+                shadegroupnodes.inputs['LymScale4'].default_value = mat["mat_lym_scale4"]
+                if "Opaque" not in mat["mat_alpha_setting"]:
+                    material.blend_method = 'BLEND'
+                if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                    tex_coord_node = material.node_tree.nodes.new(type="ShaderNodeTexCoord")
+                    mapping_node = material.node_tree.nodes.new(type="ShaderNodeMapping")
+                    mapping_node2 = material.node_tree.nodes.new(type="ShaderNodeMapping")
+                    material.node_tree.links.new(tex_coord_node.outputs['UV'], mapping_node.inputs['Vector'])
+                    material.node_tree.links.new(tex_coord_node.outputs['UV'], mapping_node2.inputs['Vector'])
+                    mapping_node.inputs[3].default_value[0] = mat["mat_uv_scale_u"]
+                    mapping_node.inputs[3].default_value[1] = mat["mat_uv_scale_v"]
+                    
+                    val_offset_x = material.node_tree.nodes.new(type="ShaderNodeValue")
+                    val_offset_x.label = "X UV Location"
+                    val_offset_x.outputs[0].default_value = mat["mat_uvcenter0_x"]
+                    
+                    val_offset_y = material.node_tree.nodes.new(type="ShaderNodeValue")
+                    val_offset_y.label = "Y UV Location"
+                    val_offset_y.outputs[0].default_value = 0.0
+                    
+                    add_node = material.node_tree.nodes.new(type="ShaderNodeMath")
+                    add_node.operation = 'ADD'
+                    add_node.inputs[1].default_value = mat["mat_uvcenter0_x"]
+                    
+                    mul_add_node = material.node_tree.nodes.new(type="ShaderNodeMath")
+                    mul_add_node.operation = 'MULTIPLY_ADD'
+                    mul_add_node.inputs[1].default_value = mat["mat_uv_scale_u"]
+                    mul_add_node.inputs[2].default_value = mat["mat_uvcenter0_x"]
+                    
+                    combine_a = material.node_tree.nodes.new(type="ShaderNodeCombineXYZ")
+                    combine_b = material.node_tree.nodes.new(type="ShaderNodeCombineXYZ")
+                    material.node_tree.links.new(val_offset_x.outputs[0], mul_add_node.inputs[0])
+                    material.node_tree.links.new(val_offset_x.outputs[0], add_node.inputs[0])
+                    material.node_tree.links.new(add_node.outputs[0], combine_b.inputs[0])
+                    material.node_tree.links.new(mul_add_node.outputs[0], combine_a.inputs[0])
+                    material.node_tree.links.new(val_offset_y.outputs[0], combine_a.inputs[1])
+                    material.node_tree.links.new(val_offset_y.outputs[0], combine_b.inputs[1])
+                    material.node_tree.links.new(combine_a.outputs['Vector'], mapping_node.inputs[1])
+                    material.node_tree.links.new(combine_b.outputs['Vector'], mapping_node2.inputs[1])
+    
+                    add_offset = material.node_tree.nodes.new(type="ShaderNodeVectorMath")
+                    add_offset.operation = 'ADD'
+                    add_offset.inputs[1].default_value[0] = mat["mat_uv_trs_u"]
+                    add_offset.inputs[1].default_value[1] = mat["mat_uv_trs_v"]
+                    material.node_tree.links.new(mapping_node.outputs['Vector'], add_offset.inputs[0])
+
+                    mod_wrap = material.node_tree.nodes.new(type="ShaderNodeVectorMath")
+                    mod_wrap.operation = 'MODULO'
+                    mod_wrap.inputs[1].default_value[0] = mat["mat_uv_scale_u"]
+                    mod_wrap.inputs[1].default_value[1] = mat["mat_uv_scale_v"]
+                    material.node_tree.links.new(add_offset.outputs['Vector'], mod_wrap.inputs[0])
+
+                    sep = material.node_tree.nodes.new(type="ShaderNodeSeparateXYZ")
+                    material.node_tree.links.new(mod_wrap.outputs['Vector'], sep.inputs['Vector'])
+
+                    compare = material.node_tree.nodes.new(type="ShaderNodeMath")
+                    compare.operation = 'GREATER_THAN'
+                    compare.inputs[1].default_value = mat["mat_uv_scale_u"] / 2
+                    material.node_tree.links.new(sep.outputs['X'], compare.inputs[0])
+    
+                    flip = material.node_tree.nodes.new(type="ShaderNodeMath")
+                    flip.operation = 'SUBTRACT'
+                    flip.inputs[0].default_value = mat["mat_uv_scale_u"]
+                    material.node_tree.links.new(sep.outputs['X'], flip.inputs[1])
+    
+                    mix = material.node_tree.nodes.new(type="ShaderNodeMixRGB")
+                    mix.blend_type = 'MIX'
+                    material.node_tree.links.new(compare.outputs[0], mix.inputs['Fac'])
+                    material.node_tree.links.new(sep.outputs['X'], mix.inputs[1])
+                    material.node_tree.links.new(flip.outputs[0], mix.inputs[2])
+    
+                    combine = material.node_tree.nodes.new(type="ShaderNodeCombineXYZ")
+                    material.node_tree.links.new(mix.outputs['Color'], combine.inputs['X'])
+                    material.node_tree.links.new(sep.outputs['Y'], combine.inputs['Y'])
+                    material.node_tree.links.new(sep.outputs['Z'], combine.inputs['Z'])
+
+
                 if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)) == True:
                     lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
                     lym_image_texture.image.colorspace_settings.name = "Non-Color"
+                    if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                        material.node_tree.links.new(combine.outputs[0], lym_image_texture.inputs[0])
                     material.node_tree.links.new(lym_image_texture.outputs[0], shadegroupnodes.inputs['Lym_color'])
-                    if color4 != (12312312.0,12312312.0,12312312.0,1.0):
-                        material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
+                    material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
+                if mat["mat_enablecolortablemap"] == "True":
+                    if os.path.exists(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension)) == True:
+                        colorsfromtable = extract_2x2_colors_blender(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension), mat["mat_colortabledividenumber"])
+                        tablecolor = []
+                        for i in range(mat["mat_colortabledividenumber"]):
+                            if use_shadow_table == True:
+                                key = f"ShadowColorTable{i}"
+                            else:
+                                key = f"BaseColorTable{i}"
+                            if key in colorsfromtable:
+                                rgb = colorsfromtable[key]
+                                rgba = (rgb[0], rgb[1], rgb[2], 1.0)
+                                tablecolor.append(rgba)
+                        print(tablecolor,mat["mat_colortabledividenumber"])
+                        try:
+                            if mat["mat_basecolor_index1"] > 0.1:
+                                shadegroupnodes.inputs['BaseColorLayer1'].default_value = tablecolor[mat["mat_basecolor_index1"]-1]
+                            if mat["mat_basecolor_index2"]> 0.1:
+                                shadegroupnodes.inputs['BaseColorLayer2'].default_value = tablecolor[mat["mat_basecolor_index2"]-1]
+                            if mat["mat_basecolor_index3"]> 0.1:
+                                shadegroupnodes.inputs['BaseColorLayer3'].default_value = tablecolor[mat["mat_basecolor_index3"]-1]
+                            if mat["mat_basecolor_index4"]> 0.1:
+                                shadegroupnodes.inputs['BaseColorLayer4'].default_value = tablecolor[mat["mat_basecolor_index4"]-1]
+                        except Exception as e:
+                            print("colormaptable failed:", e, mat["mat_basecolor_index1"],mat["mat_basecolor_index2"],mat["mat_basecolor_index3"],mat["mat_basecolor_index4"])
                 if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
                     alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                     material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
-                    material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
-
-                if mat["mat_enable_highlight_map"]:
-                
-                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    base_path = os.path.join(filep, mat["mat_lym0"][:-5])
+                    if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                        material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
+                    if "Opaque" not in mat["mat_alpha_setting"]:
+                        material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
                     
-                    if "r_eye" in material.name:
-                        primary = base_path.replace("eye_lym", "r_eye_msk") + ".png"
-                    elif "l_eye" in material.name:
-                        primary = base_path.replace("eye_lym", "l_eye_msk") + ".png"
-                    else:
-                        primary = None
-                
-                    fallback = base_path.replace("eye_lym", "eye_msk").replace("lym", "msk") + ".png"
-                
-                    for path in [primary, fallback] if primary else [fallback]:
-                        full_path = os.path.join(filep, path)
-                        if os.path.exists(full_path):
-                            highlight_image_texture.image = bpy.data.images.load(full_path)
-                            break
-
+                    
+                if mat["mat_enable_highlight_map"]:
+                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + textureextension))
                     material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
+
+                #EyelidType Upper is Disabled for now~
+                if mat["mat_eyelid_type"] == "Lower":
+                    eyelid_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    if mat["mat_eyelid_type"] == "Lower":
+                        if os.path.exists(os.path.join(filep, mat["mat_loweyemsk0"][:-5] + textureextension)) == True:
+                            eyelid_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_loweyemsk0"][:-5] + textureextension))
+                        material.node_tree.links.new(eyelid_image_texture.outputs[1], shadegroupnodes.inputs['LowEye_alpha'])
+                        material.node_tree.links.new(eyelid_image_texture.outputs[0], shadegroupnodes.inputs['LowEye_alb'])
+                    elif mat["mat_eyelid_type"] == "Upper":
+                        if os.path.exists(os.path.join(filep, mat["mat_uppeyemsk0"][:-5] + textureextension)) == True:
+                            eyelid_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_uppeyemsk0"][:-5] + textureextension))
+                        material.node_tree.links.new(eyelid_image_texture.outputs[1], shadegroupnodes.inputs['UpEye_alpha'])
+                        material.node_tree.links.new(eyelid_image_texture.outputs[0], shadegroupnodes.inputs['UpEye_alb'])
+                    if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                        material.node_tree.links.new(mapping_node2.outputs[0], eyelid_image_texture.inputs[0])
+
                 if mat["mat_enable_normal_map"]:
                     normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     if os.path.exists(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension)) == True:
@@ -1086,7 +884,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                 fseek(trmsh, trmbf_filename_start)
                 trmbf_filename_len = readlong(trmsh)
                 trmbf_filename = readfixedstring(trmsh, trmbf_filename_len)
-                print(trmbf_filename)
 
                 trmbf = None
                 if os.path.exists(os.path.join(filep, trmbf_filename)):
@@ -1332,11 +1129,18 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                             vert_buff_param_ptr_layer = readshort(trmsh)
                                             vert_buff_param_ptr_fmt = readshort(trmsh)
                                             vert_buff_param_ptr_position = readshort(trmsh)
+                                        elif vert_buff_param_struct_len == 0x0010:
+                                            vert_buff_param_struct_section_len = readshort(trmsh)
+                                            vert_buff_param_ptr_unk_a = readshort(trmsh)
+                                            vert_buff_param_ptr_type = readshort(trmsh)
+                                            vert_buff_param_ptr_layer = readshort(trmsh)
+                                            vert_buff_param_ptr_fmt = readshort(trmsh)
+                                            vert_buff_param_ptr_position = readshort(trmsh)
                                         else:
+                                            print(vert_buff_param_struct_len, "errorerrorerror")
                                             raise AssertionError("Unknown vertex buffer parameter struct length!")
 
                                         vert_buff_param_layer = 0
-
                                         if vert_buff_param_ptr_type != 0:
                                             fseek(trmsh, vert_buff_param_offset + vert_buff_param_ptr_type)
                                             vert_buff_param_type = readlong(trmsh)
@@ -1351,6 +1155,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                             vert_buff_param_position = readlong(trmsh)
                                         else:
                                             vert_buff_param_position = 0
+                                            print("vert_buff_param_position = 0")
 
                                         # -- Types:
                                         # -- 0x01: = Positions
@@ -1539,13 +1344,12 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                     vert_buffer_sub_offset = ftell(trmbf) + readlong(trmbf)
                                     vert_buffer_sub_ret = ftell(trmbf)
                                     fseek(trmbf, vert_buffer_sub_offset)
-                                    ##if y == 0:
-                                    ##    print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
-                                    ##else:
-                                    ##    print(f"Vertex buffer {x} morph {y} header: {hex(ftell(trmbf))}")
+                                    if y == 0:
+                                        print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
+                                    else:
+                                        print(f"Vertex buffer {x} morph {y} header: {hex(ftell(trmbf))}")
                                     vert_buffer_sub_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_sub_struct)
                                     vert_buffer_sub_struct_len = readshort(trmbf)
-
                                     if vert_buffer_sub_struct_len != 0x0006:
                                         raise AssertionError("Unexpected vertex buffer struct length!")
                                     vert_buffer_sub_struct_section_length = readshort(trmbf)
@@ -1939,8 +1743,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                                 Morphs_array.append(MorphVert_array)
                                             fseek(trmbf, groupret)
                                         fseek(trmbf, group_ret)
-                            fseek(trmbf, vert_buffer_ret)                                                          
-
+                            fseek(trmbf, vert_buffer_ret)
+                            
                             for b in range(len(w1_array)):
                                 w = {"boneids": [], "weights": []}
                                 maxweight = w1_array[b]["weight1"] +\
@@ -1984,27 +1788,27 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
                                     new_object.parent = bone_structure
                                     new_object.modifiers.new(name='Skeleton', type='ARMATURE')
                                     new_object.modifiers['Skeleton'].object = bone_structure
+                                    try:
+                                        for face in new_object.data.polygons:
+                                            for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+                                                w = weight_array[vert_idx]
+                                                for i in range(len(w["boneids"])):
+                                                    try:
+                                                        bone_id = bone_id_map[w['boneids'][i]]
+                                                    except:
+                                                        bone_id = None
+                                                    if bone_id:
+                                                        weight = w['weights'][i]
 
-                                    for face in new_object.data.polygons:
-                                        for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                                            print(vert_idx, len(weight_array), weight_array[vert_idx])
-                                            w = weight_array[vert_idx]
-                                            for i in range(len(w["boneids"])):
-                                                try:
-                                                    bone_id = bone_id_map[w['boneids'][i]]
-                                                except:
-                                                    bone_id = None
-                                                if bone_id:
-                                                    weight = w['weights'][i]
+                                                        group = None
+                                                        if new_object.vertex_groups.get(bone_id) == None:
+                                                            group = new_object.vertex_groups.new(name=bone_id)
+                                                        else:
+                                                            group = new_object.vertex_groups[bone_id]
 
-                                                    group = None
-                                                    if new_object.vertex_groups.get(bone_id) == None:
-                                                        group = new_object.vertex_groups.new(name=bone_id)
-                                                    else:
-                                                        group = new_object.vertex_groups[bone_id]
-
-                                                    group.add([vert_idx], weight, 'REPLACE')
-
+                                                        group.add([vert_idx], weight, 'REPLACE')
+                                    except:
+                                        print("Error Loading Weights")
                                 # # vertex colours
                                 color_layer = new_object.data.vertex_colors.new(name="Color")
                                 new_object.data.vertex_colors.active = color_layer
@@ -2066,7 +1870,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, laplayer = False):
 
                                 new_object.data.update()
                                 new_collection.objects.link(new_object)
-
+    if bone_structure == None:
+        for obj in new_collection.objects:
+            obj.rotation_euler.x += math.radians(90)
+    else:
+        bone_structure.rotation_euler.x += math.radians(90)
 
 def readbyte(file):
     return int.from_bytes(file.read(1), byteorder='little')
@@ -2113,3 +1921,39 @@ def ftell(file):
 
 def fclose(file):
     file.close()
+
+def get_pixel(x, y, w, h, pixels):
+    flipped_y = h - 1 - y
+    i = (flipped_y * w + x) * 4
+    return pixels[i:i+3]
+
+def srgb_to_linear(c):
+    if c <= 0.04045:
+        return c / 12.92
+    else:
+        return ((c + 0.055) / 1.055) ** 2.4
+
+def rgb_srgb_to_linear(rgb):
+    return [srgb_to_linear(c) for c in rgb]
+
+def extract_2x2_colors_blender(image_path, max_columns=None):
+    img = bpy.data.images.load(image_path)
+
+    w, h = img.size
+    pixels = list(img.pixels)
+
+    rows = h // 2
+    cols = w // 2
+    if max_columns is not None:
+        cols = min(cols, max_columns)
+
+    colors = {}
+    for row in range(rows):
+        for col in range(cols):
+            block = [get_pixel(col*2 + dx, row*2 + dy, w, h, pixels) for dy in range(2) for dx in range(2)]
+            avg_rgb = [sum(p[i] for p in block)/4 for i in range(3)]
+            avg_linear = rgb_srgb_to_linear(avg_rgb)
+            avg_linear.append(1.0)
+            key = f"{'BaseColorTable' if row == 0 else 'ShadowColorTable'}{col}"
+            colors[key] = tuple(round(c, 6) for c in avg_linear)
+    return colors
