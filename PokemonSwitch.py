@@ -82,6 +82,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
     bone_array = []
     bone_id_map = [None] * 1000
     bone_rig_array = []
+    extra_transform_nodes = []
+
     trskl_bone_adjust = 0
     chara_check = "None"
     with open(os.path.join(filep, trmdlname), "rb") as f:
@@ -163,6 +165,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 ]
                 transform_nodes = base_transform_nodes
                 bones = base_bones
+
                 if trskl is not None:
                     # --- Load extra TRSKL ---
                     with open(os.path.join(filep, trskl), "rb") as f:
@@ -171,8 +174,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 
                     rig_offset = extra_trskl.RigOffset()
                     base_transform_count = len(base_transform_nodes)
-                
-                    extra_transform_nodes = []
                     for i in range(extra_trskl.TransformNodesLength()):
                         node = extra_trskl.TransformNodes(i)
                         name = node.Name().decode('utf-8')
@@ -215,6 +216,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                     ]
                     transform_nodes = base_transform_nodes + extra_transform_nodes
                     bones = base_bones + extra_bones
+                    print(transform_nodes)
             else:
                 with open(os.path.join(filep, trskl), "rb") as f:
                     buf = bytearray(f.read())
@@ -285,6 +287,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 "transform_node": node,
                 "bone": bone
             })
+        
         for entry in trsklmapped:
             bone_matrix = mathutils.Matrix.LocRotScale(
                 (entry["transform_node"]["VecTranslateX"], entry["transform_node"]["VecTranslateY"], entry["transform_node"]["VecTranslateZ"]),
@@ -678,10 +681,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 shadegroupnodes.inputs['EmissionIntensityLayer2'].default_value = mat["mat_emm_intensity2"]
                 shadegroupnodes.inputs['EmissionIntensityLayer3'].default_value = mat["mat_emm_intensity3"]
                 shadegroupnodes.inputs['EmissionIntensityLayer4'].default_value = mat["mat_emm_intensity4"]
-                shadegroupnodes.inputs['LymScale1'].default_value = mat["mat_lym_scale1"]
-                shadegroupnodes.inputs['LymScale2'].default_value = mat["mat_lym_scale2"]
-                shadegroupnodes.inputs['LymScale3'].default_value = mat["mat_lym_scale3"]
-                shadegroupnodes.inputs['LymScale4'].default_value = mat["mat_lym_scale4"]
+                shadegroupnodes.inputs['LayerMaskScale1'].default_value = mat["mat_lym_scale1"]
+                shadegroupnodes.inputs['LayerMaskScale2'].default_value = mat["mat_lym_scale2"]
+                shadegroupnodes.inputs['LayerMaskScale3'].default_value = mat["mat_lym_scale3"]
+                shadegroupnodes.inputs['LayerMaskScale4'].default_value = mat["mat_lym_scale4"]
                 if "Opaque" not in mat["mat_alpha_setting"]:
                     material.blend_method = 'BLEND'
                 if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
