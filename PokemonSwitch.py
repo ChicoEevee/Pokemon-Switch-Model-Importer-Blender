@@ -382,12 +382,14 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 shader_fb = mat_fb.Shaders(s)
                 shader_name = shader_fb.ShaderName().decode("utf-8") if shader_fb.ShaderName() else ""
                 shader_values = []
+                print("------------------")
+                print("Material name:",mat_name)
+                print("Shader name:",shader_name)
                 for v in range(shader_fb.ShaderValuesLength()):
                     val_fb = shader_fb.ShaderValues(v)
                     name = val_fb.StringName().decode("utf-8")
                     value = val_fb.StringValue().decode("utf-8")
                     shader_values.append({"name": name, "value": value})
-                    
                     if name == "EnableBaseColorMap": mat_enable_base_color_map = value == "True"
                     if name == "EnableNormalMap": mat_enable_normal_map = value == "True"
                     if name == "EnableAOMap": mat_enable_ao_map = value == "True"
@@ -400,6 +402,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                     if name == "NumMaterialLayer": mat_num_material_layer = int(value)
                     if name == "EyelidType": mat_eyelid_type = value
                     if name == "EnableColorTableMap": mat_enablecolortablemap = value
+                    print("Shader Values:",name,value)
                     
                 if shader_name: mat_shader = shader_name
                 shaders.append({"shader_name": shader_name, "shader_values": shader_values})
@@ -424,6 +427,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 if texture_name == "UpperEyelidColorMap": mat_uppeyemsk0 = texture_file
                 if texture_name == "SSSMaskMap": mat_sssmask0 = texture_file
                 if texture_name == "ColorTableMap": mat_colortable_tex = texture_file
+                print("Texture Name:",name,value)
 
             for f in range(mat_fb.FloatParameterLength()):
                 fparam = mat_fb.FloatParameter(f)
@@ -441,6 +445,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 elif name == "LayerMaskScale3": mat_lym_scale3 = value
                 elif name == "LayerMaskScale4": mat_lym_scale4 = value
                 elif name == "Metallic": mat_metallic = value
+                print("Float Param:",name,value)
+
             for f in range(mat_fb.IntParameterLength()):
                 fparam = mat_fb.IntParameter(f)
                 name = fparam.IntName().decode("utf-8")
@@ -486,6 +492,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 elif name == "BaseColorIndex38": mat_basecolor_index38 = value
                 elif name == "BaseColorIndex39": mat_basecolor_index39 = value
                 elif name == "BaseColorIndex40": mat_basecolor_index40 = value
+                print("Int Param:",name,value)
+
             for f in range(mat_fb.Float4ParameterLength()):
                 fparam = mat_fb.Float4Parameter(f)
                 name = fparam.ColorName().decode("utf-8")
@@ -511,6 +519,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 elif name == "UVCenter0":
                     mat_uvcenter0_x = color.R()
                     mat_uvcenter0_y = color.G()
+                print("Color Param:",name,color.R(),color.G(),color.B(),color.A())
                     
             mat_alpha_setting = mat_fb.AlphaType().decode("utf-8") if mat_fb.AlphaType() else ""
 
