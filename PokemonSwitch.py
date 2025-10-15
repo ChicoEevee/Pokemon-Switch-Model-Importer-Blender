@@ -649,7 +649,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 "mat_alpha_setting": mat_alpha_setting,
                 "mat_metallic": mat_metallic
             })
-        mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
         
         if IN_BLENDER_ENV:
             if not 'ScViShader' in bpy.data.materials or not 'ScViShader' in bpy.data.materials:
