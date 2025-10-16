@@ -1,4 +1,4 @@
-# Pokémon Switch V3 Model Importer/Exporter Blender
+# Pokémon Switch V3 Importer/Exporter Blender
 A Python script for Blender to import/export models from Pokémon Games on Nintendo Switch.
 
 Credits to [Shararamosh](https://github.com/Shararamosh) for the work and letting me add the animation importer to this addon.
