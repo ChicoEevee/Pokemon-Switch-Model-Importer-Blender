@@ -329,7 +329,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
 
         mat_count = trmtr2.MaterialsLength()
         for x in range(mat_count):
-            mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = "";mat_loweyemsk0 = "";mat_uppeyemsk0 = ""
+            mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = "";mat_loweyemsk0 = "";mat_uppeyemsk0 = ""; mat_opacity_map = ""
             mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0.0; mat_uv_trs_v = 0.0
             mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0.0; mat_uv_trs2_v = 0.0
             mat_uvcenter0_x = 0.0;mat_uvcenter0_y = 0.0
@@ -338,6 +338,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
             mat_color2_r = 1.0; mat_color2_g = 1.0; mat_color2_b = 1.0
             mat_color3_r = 1.0; mat_color3_g = 1.0; mat_color3_b = 1.0
             mat_color4_r = 1.0; mat_color4_g = 1.0; mat_color4_b = 1.0
+            mat_color5_r = 1.0; mat_color5_g = 1.0; mat_color5_b = 1.0 ##used on mask color
             #Need to figure out what does the others BaseColorLayer8 its related to LowerEyelidColor
             mat_color8_r = 1.0; mat_color8_g = 1.0; mat_color8_b = 1.0
 
@@ -424,6 +425,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 if texture_name == "UpperEyelidColorMap": mat_uppeyemsk0 = texture_file
                 if texture_name == "SSSMaskMap": mat_sssmask0 = texture_file
                 if texture_name == "ColorTableMap": mat_colortable_tex = texture_file
+                if texture_name == "OpacityMap1": mat_opacity_map = texture_file
 
             for f in range(mat_fb.FloatParameterLength()):
                 fparam = mat_fb.FloatParameter(f)
@@ -495,6 +497,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 elif name == "BaseColorLayer2":  mat_color2_r, mat_color2_g, mat_color2_b = color.R(), color.G(), color.B()
                 elif name == "BaseColorLayer3": mat_color3_r, mat_color3_g, mat_color3_b = color.R(), color.G(), color.B()
                 elif name == "BaseColorLayer4": mat_color4_r, mat_color4_g, mat_color4_b = color.R(), color.G(), color.B()
+                elif name == "BaseColorLayer5": mat_color5_r, mat_color5_g, mat_color5_b = color.R(), color.G(), color.B()
                 elif name == "BaseColorLayer8": mat_color8_r, mat_color8_g, mat_color8_b = color.R(), color.G(), color.B()
                 elif name == "EmissionColorLayer1": mat_emcolor1_r, mat_emcolor1_g, mat_emcolor1_b = color.R(), color.G(), color.B()
                 elif name == "EmissionColorLayer2": mat_emcolor2_r, mat_emcolor2_g, mat_emcolor2_b = color.R(), color.G(), color.B()
@@ -532,11 +535,13 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 "mat_eyelid_type": mat_eyelid_type,
                 "mat_uvcenter0_x": mat_uvcenter0_x,
                 "mat_uvcenter0_y": mat_uvcenter0_y,
+                "mat_opacity_map": mat_opacity_map,
                 "mat_color_r": mat_color_r, "mat_color_g": mat_color_g, "mat_color_b": mat_color_b,
                 "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b,
                 "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b,
                 "mat_color3_r": mat_color3_r, "mat_color3_g": mat_color3_g, "mat_color3_b": mat_color3_b,
                 "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b,
+                "mat_color5_r": mat_color5_r, "mat_color5_g": mat_color5_g, "mat_color5_b": mat_color5_b,
                 "mat_color8_r": mat_color8_r, "mat_color8_g": mat_color8_g, "mat_color8_b": mat_color8_b,
                 "mat_emcolor1_r": mat_emcolor1_r, "mat_emcolor1_g": mat_emcolor1_g, "mat_emcolor1_b": mat_emcolor1_b,
                 "mat_emcolor2_r": mat_emcolor2_r, "mat_emcolor2_g": mat_emcolor2_g, "mat_emcolor2_b": mat_emcolor2_b,
@@ -659,6 +664,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
                 color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
                 color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
+                color5 = (mat["mat_color5_r"], mat["mat_color5_g"], mat["mat_color5_b"], 1.0)
                 color8 = (mat["mat_color8_r"], mat["mat_color8_g"], mat["mat_color8_b"], 1.0)
                 if "eye" in mat["mat_name"] and "pm" in trmtr_name:
                     shadegroupnodes.inputs['LowEye_color'].default_value = color8
@@ -670,6 +676,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 shadegroupnodes.inputs['BaseColorLayer2'].default_value = color2
                 shadegroupnodes.inputs['BaseColorLayer3'].default_value = color3
                 shadegroupnodes.inputs['BaseColorLayer4'].default_value = color4
+                shadegroupnodes.inputs['Mask_color'].default_value = color5
                 shadegroupnodes.inputs['EmissionColorLayer1'].default_value = emcolor1
                 shadegroupnodes.inputs['EmissionColorLayer2'].default_value = emcolor2
                 shadegroupnodes.inputs['EmissionColorLayer3'].default_value = emcolor3
@@ -782,7 +789,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                                 rgb = colorsfromtable[key]
                                 rgba = (rgb[0], rgb[1], rgb[2], 1.0)
                                 tablecolor.append(rgba)
-                        print(tablecolor,mat["mat_colortabledividenumber"])
                         try:
                             if mat["mat_basecolor_index1"] > 0.1:
                                 shadegroupnodes.inputs['BaseColorLayer1'].default_value = tablecolor[mat["mat_basecolor_index1"]-1]
@@ -802,6 +808,12 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                         material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
                     if "Opaque" not in mat["mat_alpha_setting"]:
                         material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
+                if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
+                    opacity_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    opacity_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension))
+                    material.node_tree.links.new(opacity_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
+                    if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                        material.node_tree.links.new(combine.outputs[0], opacity_image_texture.inputs[0])
                 try:
                     if mat["mat_enable_highlight_map"]:
                         highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
