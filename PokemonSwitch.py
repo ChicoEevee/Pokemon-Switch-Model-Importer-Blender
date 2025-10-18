@@ -778,7 +778,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                     material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
                 if mat["mat_enablecolortablemap"] == "True":
                     if os.path.exists(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension)) == True:
-                        colorsfromtable = extract_2x2_colors_blender(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension), mat["mat_colortabledividenumber"])
+                        colorsfromtable = extract_2x2_colors_blender(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension), mat["mat_colortabledividenumber"],mat["mat_name"])
                         tablecolor = []
                         for i in range(mat["mat_colortabledividenumber"]):
                             if use_shadow_table == True:
@@ -1967,7 +1967,7 @@ def srgb_to_linear(c):
 def rgb_srgb_to_linear(rgb):
     return [srgb_to_linear(c) for c in rgb]
 
-def extract_2x2_colors_blender(image_path, max_columns=None):
+def extract_2x2_colors_blender(image_path, max_columns=None, material_name=None):
     img = bpy.data.images.load(image_path)
 
     w, h = img.size
@@ -1979,12 +1979,38 @@ def extract_2x2_colors_blender(image_path, max_columns=None):
         cols = min(cols, max_columns)
 
     colors = {}
+    base_colors = []
+    shadow_colors = []
     for row in range(rows):
         for col in range(cols):
             block = [get_pixel(col*2 + dx, row*2 + dy, w, h, pixels) for dy in range(2) for dx in range(2)]
             avg_rgb = [sum(p[i] for p in block)/4 for i in range(3)]
             avg_linear = rgb_srgb_to_linear(avg_rgb)
             avg_linear.append(1.0)
-            key = f"{'BaseColorTable' if row == 0 else 'ShadowColorTable'}{col}"
-            colors[key] = tuple(round(c, 6) for c in avg_linear)
+            color = tuple(round(c, 6) for c in avg_linear)
+
+            if row == 0:
+                key = f"BaseColorTable{col}"
+                base_colors.append(color)
+            else:
+                key = f"ShadowColorTable{col}"
+                shadow_colors.append(color)
+
+            colors[key] = color
+
+    def make_palette(name, color_list):
+        full_name = f"{name}_{material_name}"
+        # Remove if already exists
+        if full_name in bpy.data.palettes:
+            bpy.data.palettes.remove(bpy.data.palettes[full_name])
+        palette = bpy.data.palettes.new(full_name)
+        for col in color_list:
+            color_entry = palette.colors.new()
+            color_entry.color = col[:3]
+        return palette
+    
+    make_palette("BaseColorPalette", base_colors)
+    make_palette("ShadowColorPalette", shadow_colors)
+
+
     return colors
