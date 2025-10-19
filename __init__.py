@@ -189,6 +189,48 @@ class TRSKLExport(bpy.types.Operator, ExportHelper):
         self.report({"ERROR"}, "No Armature selected for export.")
         return {"CANCELLED"}
 
+class TRCMAImport(bpy.types.Operator, ImportHelper):
+    """
+    Class for operator that imports Pokémon Animation files.
+    """
+    bl_idname = "import_scene.trcma"
+    bl_label = "Import TRCMA"
+    bl_description = "Import one or multiple Nintendo Switch Pokémon Animation files"
+    directory: StringProperty()
+    filter_glob: StringProperty(default="*.trcma", options={"HIDDEN"})
+    files: CollectionProperty(type=bpy.types.PropertyGroup)
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        """
+        Executing import menu.
+        :param context: Blender's context.
+        :return: Result.
+        """
+        if not attempt_install_flatbuffers(self, context):
+            return {"CANCELLED"}
+        from .trinitycam_importer import import_trcma
+        if self.files:
+            b = False
+            for file in self.files:
+                file_path = os.path.join(str(self.directory), file.name)
+                try:
+                    import_trcma(context, file_path)
+                except OSError as e:
+                    self.report({"INFO"}, f"Failed to import {file_path}. {str(e)}")
+                else:
+                    b = True
+                finally:
+                    pass
+            if b:
+                return {"FINISHED"}
+            return {"CANCELLED"}
+        try:
+            import_trcma(context, self.filepath)
+        except OSError as e:
+            self.report({"ERROR"}, f"Failed to import {self.filepath}. {str(e)}")
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
 
 class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
     """
@@ -709,6 +751,7 @@ class PokemonSwitchImportMenu(bpy.types.Menu):
         
         self.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
         self.layout.operator(ImportGfbanm.bl_idname, text="Pokémon Animation (.gfbanm/.tranm)")
+        self.layout.operator(TRCMAImport.bl_idname, text="Pokémon Camera Animation (.trcma)")
         self.layout.operator(TRINSImport.bl_idname, text="Pokémon Map Instances (.trins)")
         self.layout.operator(TRSCNImport.bl_idname, text="Pokémon Scene Object (.trscn)")
         self.layout.operator(ImportGfmdl.bl_idname, text="SWSH and Lets GO Models (.gfbmdl) NO TEXTURES FOR NOW REQUIRES TO BE MANUAL!!!")
@@ -761,6 +804,7 @@ def register():
     register_class(PokeSVImport)
     register_class(ImportGfmdl)
     register_class(ImportGfbanm)
+    register_class(TRCMAImport)
     register_class(TRSCNImport)
     register_class(TRINSImport)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
@@ -779,6 +823,7 @@ def unregister():
     unregister_class(PokeSVImport)
     unregister_class(ImportGfmdl)
     unregister_class(ImportGfbanm)
+    unregister_class(TRCMAImport)
     unregister_class(TRSCNImport)
     unregister_class(TRINSImport)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
