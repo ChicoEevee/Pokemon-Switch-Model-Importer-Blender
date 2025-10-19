@@ -508,12 +508,16 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
                 elif name == "UVScaleOffset":
                     mat_uv_scale_u = color.R()
                     mat_uv_scale_v = color.G()
+                    mat_uv_trs_u = color.B()
+                    mat_uv_trs_v = color.A()
                 elif name == "UVScaleOffset1":
-                    mat_uv_scale2_u = color.R()
-                    mat_uv_scale2_v = color.G()
+                    mat_uv_scale_u2 = color.R()
+                    mat_uv_scale_v2 = color.G()
+                    mat_uv_trs_u2 = color.B()
+                    mat_uv_trs_v2 = color.A()
                 elif name == "UVCenter0":
-                    mat_uvcenter0_x = color.R()
-                    mat_uvcenter0_y = color.G()
+                    mat_uvcenter0_x = color.G()
+                    mat_uvcenter0_y = color.B()
                     
             mat_alpha_setting = mat_fb.AlphaType().decode("utf-8") if mat_fb.AlphaType() else ""
 
