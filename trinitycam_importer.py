@@ -31,12 +31,18 @@ def import_trcma(context, file_path: str):
     cam_name = cam_anim.CamName().decode("utf-8")
 
     cam_obj = get_or_create_camera(cam_name)
-    empty = bpy.data.objects.new(f"{base_name}_Rig", None)
+
+    if cam_obj.parent and cam_obj.parent.type == 'EMPTY':
+        empty = cam_obj.parent
+    else:
+        empty = bpy.data.objects.new(f"{base_name}_Rig", None)
+        context.collection.objects.link(empty)
+        cam_obj.parent = empty
     add_fov_driver(cam_obj, empty)
-    context.collection.objects.link(empty)
-    cam_obj.parent = empty
-    empty.animation_data_create()
-    empty.animation_data.action = bpy.data.actions.new(name=base_name)
+    if not empty.animation_data:
+        empty.animation_data_create()
+    if not empty.animation_data.action:
+        empty.animation_data.action = bpy.data.actions.new(name=base_name)
     if "fieldofview" not in empty:
         empty["fieldofview"] = 0.0
     anim1 = cam_anim.AnimInfo1()
@@ -59,7 +65,8 @@ def import_trcma(context, file_path: str):
             cam_obj.rotation_mode = 'QUATERNION'
             cam_obj.rotation_quaternion = rot
             cam_obj.keyframe_insert(data_path="rotation_quaternion", frame=i)
-    if empty.rotation_euler.x != math.radians(90):
+    print(empty.rotation_euler.x)
+    if empty.rotation_euler.x != 1.5707963705062866:
         empty.rotation_euler.x += math.radians(90)
 def add_fov_driver(cam_obj, empty):
     if "fieldofview" not in empty:
