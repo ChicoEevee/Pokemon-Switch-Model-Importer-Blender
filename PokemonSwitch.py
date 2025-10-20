@@ -810,8 +810,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                     material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
                     if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
                         material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
-                    if "Opaque" not in mat["mat_alpha_setting"]:
-                        material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
+                    material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
                 if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
                     opacity_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     opacity_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension))
