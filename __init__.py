@@ -467,6 +467,11 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         description="Uses the other variant for coloring.",
         default=False
     )
+    rotate90: BoolProperty(
+        name="Rotate 90º Armature",
+        description="Just Rotation.",
+        default=False
+    )
 
     def draw(self, context: bpy.types.Context):
         """
@@ -478,6 +483,7 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         self.layout.prop(self, "multiplesubs")
         self.layout.prop(self, "loadlods")
         self.layout.prop(self, "use_shadow_table")
+        self.layout.prop(self, "rotate90")
 
     def execute(self, context: bpy.types.Context):
         """
@@ -496,15 +502,15 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
                         trmdl_files.append((root, item))
             trmdl_files.sort(key=lambda x: os.path.join(x[0], x[1]))
             for root, item in trmdl_files:
-                from_trmdlsv(root, item, self.rare, self.loadlods, self.use_shadow_table)
+                from_trmdlsv(root, item, self.rare, self.loadlods, self.use_shadow_table,self.rotate90)
         elif self.multiple:
             file_list = sorted(os.listdir(directory))
             obj_list = [item for item in file_list if item.endswith(".trmdl")]
             for item in obj_list:
-                from_trmdlsv(directory, item, self.rare, self.loadlods, self.use_shadow_table)
+                from_trmdlsv(directory, item, self.rare, self.loadlods, self.use_shadow_table,self.rotate90)
         else:
             filename = os.path.basename(self.filepath)
-            from_trmdlsv(directory, filename, self.rare, self.loadlods, self.use_shadow_table)
+            from_trmdlsv(directory, filename, self.rare, self.loadlods, self.use_shadow_table,self.rotate90)
 
         return {"FINISHED"}
 
