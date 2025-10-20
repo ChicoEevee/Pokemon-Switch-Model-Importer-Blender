@@ -1905,11 +1905,12 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
 
                                 new_object.data.update()
                                 new_collection.objects.link(new_object)
-    if bone_structure == None:
-        for obj in new_collection.objects:
-            obj.rotation_euler.x += math.radians(90)
-    else:
-        bone_structure.rotation_euler.x += math.radians(90)
+    if rotate90 == True:
+        if bone_structure == None:
+            for obj in new_collection.objects:
+                obj.rotation_euler.x += math.radians(90)
+        else:
+            bone_structure.rotation_euler.x += math.radians(90)
 
 def readbyte(file):
     return int.from_bytes(file.read(1), byteorder='little')
