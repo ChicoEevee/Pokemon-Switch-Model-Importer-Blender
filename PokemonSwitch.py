@@ -63,7 +63,7 @@ def find_player_base_path(filep, chara_check):
     return None
 
 
-def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table):
+def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdlname[:-6]))
