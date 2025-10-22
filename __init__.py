@@ -291,7 +291,7 @@ class EXPORT_OT_trmsh_trmbf(Operator, ExportHelper):
 
         bone_dict = trskl_to_dict(abs_path, settings.use_base_trskl, bpy.path.abspath(settings.extra_file))
         filename, _ = os.path.splitext(abs_path)
-        abs_path = filename + ".trmbf"
+        file_path = filename + ".trmbf"
         trmbf, trmsh = export_trmbf_trmsh(export_settings, bone_dict, os.path.basename(abs_path))
 
         if trmbf is not None:
