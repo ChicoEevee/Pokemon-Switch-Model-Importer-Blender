@@ -271,9 +271,9 @@ class EXPORT_OT_trmsh_trmbf(Operator, ExportHelper):
 
     def execute(self, context):
         settings = context.scene.trmbf_export_settings
-
-        if not os.path.isfile(settings.filepath):
-            self.report({"ERROR"}, f"{os.path.basename(settings.filepath)} is not a TRSKL file.")
+        abs_path = bpy.path.abspath(settings.filepath)
+        if not os.path.isfile(abs_path):
+            self.report({"ERROR"}, f"{os.path.basename(abs_path)} is not a TRSKL file.")
             return {"CANCELLED"}
 
         export_settings = {
@@ -289,10 +289,10 @@ class EXPORT_OT_trmsh_trmbf(Operator, ExportHelper):
 
         from .trmshbf_exporter import trskl_to_dict, export_trmbf_trmsh
 
-        bone_dict = trskl_to_dict(settings.filepath, settings.use_base_trskl, settings.extra_file)
-        filename, _ = os.path.splitext(settings.filepath)
-        file_path = filename + ".trmbf"
-        trmbf, trmsh = export_trmbf_trmsh(export_settings, bone_dict, os.path.basename(file_path))
+        bone_dict = trskl_to_dict(abs_path, settings.use_base_trskl, bpy.path.abspath(settings.extra_file))
+        filename, _ = os.path.splitext(abs_path)
+        abs_path = filename + ".trmbf"
+        trmbf, trmsh = export_trmbf_trmsh(export_settings, bone_dict, os.path.basename(abs_path))
 
         if trmbf is not None:
             with open(file_path, "wb") as file:
