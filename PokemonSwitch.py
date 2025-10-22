@@ -402,7 +402,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                     if name == "NumMaterialLayer": mat_num_material_layer = int(value)
                     if name == "EyelidType": mat_eyelid_type = value
                     if name == "EnableColorTableMap": mat_enablecolortablemap = value
-                    if name == "SpecularMaskMap": mat_spec_map0 = value
                 if shader_name: mat_shader = shader_name
                 shaders.append({"shader_name": shader_name, "shader_values": shader_values})
 
@@ -427,6 +426,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                 if texture_name == "SSSMaskMap": mat_sssmask0 = texture_file
                 if texture_name == "ColorTableMap": mat_colortable_tex = texture_file
                 if texture_name == "OpacityMap1": mat_opacity_map = texture_file
+                if texture_name == "SpecularMaskMap": mat_spec_map0 = texture_file
 
             for f in range(mat_fb.FloatParameterLength()):
                 fparam = mat_fb.FloatParameter(f)
