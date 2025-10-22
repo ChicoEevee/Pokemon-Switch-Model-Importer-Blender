@@ -657,12 +657,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                         shadegroupnodes.inputs['BaseColor'].default_value = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 except:
                     print("")
-
-
-                if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)) == True:
-                    lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
-                    lym_image_texture.image.colorspace_settings.name = "Non-Color"
                 
                 color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
@@ -771,15 +765,16 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                     material.node_tree.links.new(sep.outputs['Y'], combine.inputs['Y'])
                     material.node_tree.links.new(sep.outputs['Z'], combine.inputs['Z'])
 
-
                 if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)) == True:
                     lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
+                    lym_image_texture.interpolation = "Closest"
                     lym_image_texture.image.colorspace_settings.name = "Non-Color"
                     if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
                         material.node_tree.links.new(combine.outputs[0], lym_image_texture.inputs[0])
                     material.node_tree.links.new(lym_image_texture.outputs[0], shadegroupnodes.inputs['Lym_color'])
                     material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
+                  
                 if mat["mat_enablecolortablemap"] == "True":
                     if os.path.exists(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension)) == True:
                         colorsfromtable = extract_2x2_colors_blender(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension), mat["mat_colortabledividenumber"],mat["mat_name"])
@@ -804,6 +799,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                                 shadegroupnodes.inputs['BaseColorLayer4'].default_value = tablecolor[mat["mat_basecolor_index4"]-1]
                         except Exception as e:
                             print("colormaptable failed:", e, mat["mat_basecolor_index1"],mat["mat_basecolor_index2"],mat["mat_basecolor_index3"],mat["mat_basecolor_index4"])
+                          
                 if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
                     alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
@@ -811,6 +807,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                     if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
                         material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
                     material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
+                    alb_image_texture.interpolation = "Closest"
+
+              
                 if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
                     opacity_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     opacity_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension))
