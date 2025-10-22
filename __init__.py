@@ -232,105 +232,107 @@ class TRCMAImport(bpy.types.Operator, ImportHelper):
         return {"FINISHED"}
 
 
-class ExportTRMBFMSH(bpy.types.Operator, ExportHelper):
-    """
-    Class for operator that exports meshes to TRMBF and TRMSH.
-    """
-    bl_idname = "export_scene.trmsh_trmbf"
-    bl_description = "Export selected Meshes as TRMSH and TRMBF files for selected TRSKL file"
-    bl_label = "Export as TRMSH, TRMBF"
-    filename_ext = ".trskl"
-
-    filter_glob: StringProperty(
+class TRMBFMSHExportSettings(PropertyGroup):
+    use_normal: BoolProperty(name="Use Normal", default=True)
+    use_tangent: BoolProperty(name="Use Tangent", default=True)
+    use_binormal: BoolProperty(name="Use Binormal", default=False)
+    use_uv: BoolProperty(name="Use UVs", default=True)
+    uv_count: IntProperty(name="UV Layer Count", default=1)
+    use_color: BoolProperty(name="Use Vertex Colors", default=False)
+    color_count: IntProperty(name="Color Layer Count", default=1)
+    use_skinning: BoolProperty(name="Use Skinning", default=True)
+    use_base_trskl: BoolProperty(name="Use Base TRSKL", default=False)
+    extra_file: StringProperty(
+        name="Extra TRSKL if exists",
+        subtype="FILE_PATH",
+        default="",
+    )
+    extra_file_filter_glob: StringProperty(
         default="*.trskl",
         options={"HIDDEN"}
     )
-    use_normal: BoolProperty(
-        name="Use Normal",
-        default=True,
+    
+    filepath: StringProperty(
+        name="TRSKL File",
+        subtype="FILE_PATH",
+        default="",
+    )
+    filepath_filter_glob: StringProperty(
+        default="*.trskl",
+        options={"HIDDEN"}
     )
 
-    use_tangent: BoolProperty(
-        name="Use Tangent",
-        default=True,
-    )
+class EXPORT_OT_trmsh_trmbf(Operator, ExportHelper):
+    bl_idname = "export_scene.trmsh_trmbf"
+    bl_label = "Export as TRMSH, TRMBF"
+    bl_description = "Export selected Meshes as TRMSH and TRMBF files for selected TRSKL file"
+    filename_ext = ".trskl"
+    filter_glob: StringProperty(default="*.trskl", options={"HIDDEN"})
 
-    use_binormal: BoolProperty(
-        name="Use Binormal",
-        default=False,
-    )
+    def execute(self, context):
+        settings = context.scene.trmbf_export_settings
 
-    use_uv: BoolProperty(
-        name="Use UVs",
-        default=True,
-    )
-
-    uv_count: IntProperty(
-        name="UV Layer Count",
-        default=1,
-    )
-
-    use_color: BoolProperty(
-        name="Use Vertex Colors",
-        default=False,
-    )
-
-    color_count: IntProperty(
-        name="Color Layer Count",
-        default=1,
-    )
-    use_skinning: BoolProperty(name="Use Skinning", default=True)
-    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
-
-    def draw(self, context: bpy.types.Context):
-        """
-        Drawing exporter's menu.
-        :param context: Blender's context.
-        """
-        self.layout.prop(self, "use_normal")
-        self.layout.prop(self, "use_tangent")
-        self.layout.prop(self, "use_binormal")
-        self.layout.prop(self, "use_uv")
-        self.layout.prop(self, "uv_count")
-        self.layout.prop(self, "use_color")
-        self.layout.prop(self, "color_count")
-
-    def execute(self, context: bpy.types.Context):
-        """
-        Executing export menu.
-        :param context: Blender's context.
-        """
-        if not os.path.isfile(self.filepath):
-            self.report({"ERROR"}, f"{os.path.basename(self.filepath)} is not a TRSKL file.")
+        if not os.path.isfile(settings.filepath):
+            self.report({"ERROR"}, f"{os.path.basename(settings.filepath)} is not a TRSKL file.")
             return {"CANCELLED"}
+
         export_settings = {
-            "normal": self.use_normal,
-            "tangent": self.use_tangent,
-            "binormal": self.use_binormal,
-            "uv": self.use_uv,
-            "uv_count": self.uv_count,
-            "color": self.use_color,
-            "color_count": self.color_count,
-            "skinning": self.use_skinning
+            "normal": settings.use_normal,
+            "tangent": settings.use_tangent,
+            "binormal": settings.use_binormal,
+            "uv": settings.use_uv,
+            "uv_count": settings.uv_count,
+            "color": settings.use_color,
+            "color_count": settings.color_count,
+            "skinning": settings.use_skinning
         }
+
         from .trmshbf_exporter import trskl_to_dict, export_trmbf_trmsh
-        bone_dict = trskl_to_dict(self.filepath)
-        filename, _ = os.path.splitext(self.filepath)
+
+        bone_dict = trskl_to_dict(settings.filepath, settings.use_base_trskl, settings.extra_file)
+        filename, _ = os.path.splitext(settings.filepath)
         file_path = filename + ".trmbf"
         trmbf, trmsh = export_trmbf_trmsh(export_settings, bone_dict, os.path.basename(file_path))
-        # Export complete trmbf
+
         if trmbf is not None:
             with open(file_path, "wb") as file:
                 file.write(trmbf)
                 print(f"TRMBF successfully exported to {file_path}.")
-        # Export complete trmsh
+
         if trmsh is not None:
             file_path = filename + ".trmsh"
             with open(file_path, "wb") as file:
                 file.write(trmsh)
                 print(f"TRMSH successfully exported to {file_path}.")
+
         return {"FINISHED"}
 
+class EXPORT_PT_trmsh_trmbf_panel(Panel):
+    bl_label = "TRMSH/TRMBF Exporter"
+    bl_idname = "EXPORT_PT_trmsh_trmbf_panel"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "TRMSH/TRMBF Exporter"
+
+    def draw(self, context):
+        layout = self.layout
+        settings = context.scene.trmbf_export_settings
+
+        layout.prop(settings, "filepath")
+        layout.prop(settings, "use_normal")
+        layout.prop(settings, "use_tangent")
+        layout.prop(settings, "use_binormal")
+        layout.prop(settings, "use_uv")
+        layout.prop(settings, "uv_count")
+        layout.prop(settings, "use_color")
+        layout.prop(settings, "color_count")
+
+        layout.label(text="Base TRSKL")
+        layout.prop(settings, "use_base_trskl")
+        layout.prop(settings, "extra_file", text="")
+        layout.label(text="This will use two TRSKL files if set")
+
+        layout.operator("export_scene.trmsh_trmbf", text="Export TRMSH & TRMBF")
 
 class TRINSImport(bpy.types.Operator, ImportHelper):
     """Import TRINS particle instance files"""
@@ -778,8 +780,6 @@ class PokemonSwitchExportMenu(bpy.types.Menu):
         self.layout.operator(TRSKLExport.bl_idname, text="Pokémon Trinity Skeleton (.trskl)")
         self.layout.operator(ExportGfbanm.bl_idname,
                              text="Pokémon Animation (.gfbanm/.tranm)")
-        self.layout.operator(ExportTRMBFMSH.bl_idname,
-                             text="Pokémon Trinity Mesh (.trmsh, .trmbf)")
 
 
 def menu_func_import(operator: bpy.types.Operator, context: bpy.types.Context):
@@ -817,8 +817,11 @@ def register():
     register_class(PokemonSwitchExportMenu)
     register_class(TRSKLExport)
     register_class(ExportGfbanm)
-    register_class(ExportTRMBFMSH)
+    register_class(TRMBFMSHExportSettings)
+    register_class(EXPORT_OT_trmsh_trmbf)
+    register_class(EXPORT_PT_trmsh_trmbf_panel)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    bpy.types.Scene.trmbf_export_settings = bpy.props.PointerProperty(type=TRMBFMSHExportSettings)
 
 
 def unregister():
@@ -836,8 +839,11 @@ def unregister():
     unregister_class(PokemonSwitchExportMenu)
     unregister_class(TRSKLExport)
     unregister_class(ExportGfbanm)
-    unregister_class(ExportTRMBFMSH)
+    unregister_class(TRMBFMSHExportSettings)
+    unregister_class(EXPORT_OT_trmsh_trmbf)
+    unregister_class(EXPORT_PT_trmsh_trmbf_panel)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    del bpy.types.Scene.trmbf_export_settings
 
 
 def attempt_install_flatbuffers(operator: bpy.types.Operator, context: bpy.types.Context) -> bool:

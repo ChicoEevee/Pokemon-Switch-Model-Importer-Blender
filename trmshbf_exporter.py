@@ -31,6 +31,7 @@ from Titan.Model.Sphere import SphereT
 from Titan.Model.VertexAccessor import VertexAccessorT
 from Titan.Model.VertexSize import VertexSizeT
 from Titan.Model.VisShape import VisShapeT
+from Titan.Model.TRSKL import TRSKL
 
 vertFormat = struct.Struct("<fff")
 normFormat = struct.Struct("<eeee")
@@ -214,7 +215,7 @@ def get_trmsh_data(obj: bpy.types.Object, settings: dict) -> dict:
     for _, material in enumerate(obj.material_slots):
         if material.name != "":
             new_material = {
-                "material_name": material.name,
+                "material_name": material.name.split('.')[0],
                 "poly_offset": 0,
                 # "poly_count": len(obj.data.polygons) * 3,
                 "poly_count": get_poly_count_for_mat(obj, material.name) * 3,
@@ -250,7 +251,8 @@ def get_trmsh_data(obj: bpy.types.Object, settings: dict) -> dict:
         "influence": [{"index": 1, "scale": 36.0}],
         "vis_shapes": [],
         "mesh_name": obj.name,
-        "unk13": 0
+        "unk13": 0,
+        "morph_shape": []
     }
     return mesh
 
@@ -433,145 +435,143 @@ def f_open(file: FileIO):
     file.open()
 
 
-def trskl_to_dict(filepath: str) -> dict:
+def trskl_to_dict(filepath: str, use_base_trskl: bool = False, base_trskl_path: str = None) -> dict:
     """
-    Reads TRSKL file as dictionary for TRMSH and TRMBF export.
-    :param filepath: Path to TRSKL file.
-    :returns: TRSKL dictionary.
+    Reads a TRSKL file (optionally using a base TRSKL) and returns a dictionary of bone names to rig IDs.
+    
+    :param filepath: Path to the main TRSKL file.
+    :param use_base_trskl: Whether to use a base TRSKL for merging.
+    :param base_trskl_path: Path to the base TRSKL file (required if use_base_trskl is True).
+    :return: Dictionary mapping bone names to rig IDs.
     """
-    with open(filepath, "rb") as trskl:
-        bone_array = []
-        bone_id_map = {}
-        bone_rig_array = []
-        trskl_bone_adjust = 0
-        print("Parsing TRSKL...")
-        trskl_file_start = read_long(trskl)
-        f_seek(trskl, trskl_file_start)
-        trskl_struct = f_tell(trskl) - read_long(trskl);
-        f_seek(trskl, trskl_struct)
-        trskl_struct_len = read_short(trskl)
-        if trskl_struct_len == 0x000C:
-            trskl_struct_section_len = read_short(trskl)
-            trskl_struct_start = read_short(trskl)
-            trskl_struct_bone = read_short(trskl)
-            trskl_struct_b = read_short(trskl)
-            trskl_struct_c = read_short(trskl)
-            trskl_struct_bone_adjust = 0
-        elif trskl_struct_len == 0x000E:
-            trskl_struct_section_len = read_short(trskl)
-            trskl_struct_start = read_short(trskl)
-            trskl_struct_bone = read_short(trskl)
-            trskl_struct_b = read_short(trskl)
-            trskl_struct_c = read_short(trskl)
-            trskl_struct_bone_adjust = read_short(trskl)
-        else:
-            raise AssertionError("Unexpected TRSKL header struct length!")
-        if trskl_struct_bone_adjust != 0:
-            f_seek(trskl, trskl_file_start + trskl_struct_bone_adjust)
-            trskl_bone_adjust = read_long(trskl)
-            print(f"Mesh node IDs start at {trskl_bone_adjust}")
-        if trskl_struct_bone != 0:
-            f_seek(trskl, trskl_file_start + trskl_struct_bone)
-            trskl_bone_start = f_tell(trskl) + read_long(trskl)
-            f_seek(trskl, trskl_bone_start)
-            bone_count = read_long(trskl)
-            for x in range(bone_count):
-                bone_offset = f_tell(trskl) + read_long(trskl)
-                bone_ret = f_tell(trskl)
-                f_seek(trskl, bone_offset)
-                trskl_bone_struct = f_tell(trskl) - read_long(trskl)
-                f_seek(trskl, trskl_bone_struct)
-                trskl_bone_struct_len = read_short(trskl)
-                if trskl_bone_struct_len == 0x0012:
-                    trskl_bone_struct_ptr_section_len = read_short(trskl)
-                    trskl_bone_struct_ptr_string = read_short(trskl)
-                    trskl_bone_struct_ptr_bone = read_short(trskl)
-                    trskl_bone_struct_ptr_c = read_short(trskl)
-                    trskl_bone_struct_ptr_d = read_short(trskl)
-                    trskl_bone_struct_ptr_parent = read_short(trskl)
-                    trskl_bone_struct_ptr_rig_id = read_short(trskl)
-                    trskl_bone_struct_ptr_bone_merge = read_short(trskl)
-                    trskl_bone_struct_ptr_h = 0
-                elif trskl_bone_struct_len == 0x0014:
-                    trskl_bone_struct_ptr_section_len = read_short(trskl)
-                    trskl_bone_struct_ptr_string = read_short(trskl)
-                    trskl_bone_struct_ptr_bone = read_short(trskl)
-                    trskl_bone_struct_ptr_c = read_short(trskl)
-                    trskl_bone_struct_ptr_d = read_short(trskl)
-                    trskl_bone_struct_ptr_parent = read_short(trskl)
-                    trskl_bone_struct_ptr_rig_id = read_short(trskl)
-                    trskl_bone_struct_ptr_bone_merge = read_short(trskl)
-                    trskl_bone_struct_ptr_h = read_short(trskl)
+    transform_nodes = []
+    bones = []
+
+    if use_base_trskl:
+        if base_trskl_path is None:
+            raise ValueError("base_trskl_path must be provided when use_base_trskl is True.")
+
+        # --- Load base TRSKL ---
+        with open(base_trskl_path, "rb") as f:
+            buf = bytearray(f.read())
+        base_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
+        base_transform_nodes = []
+        base_name_to_idx = {}
+        
+        for i in range(base_trskl.TransformNodesLength()):
+            node = base_trskl.TransformNodes(i)
+            name = node.Name().decode('utf-8')
+            base_name_to_idx[name] = len(base_transform_nodes)
+            base_transform_nodes.append({
+                "name": name,
+                "VecTranslateX": node.Transform().VecTranslate().X(),
+                "VecTranslateY": node.Transform().VecTranslate().Y(),
+                "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                "VecScaleX": node.Transform().VecScale().X(),
+                "VecScaleY": node.Transform().VecScale().Y(),
+                "VecScaleZ": node.Transform().VecScale().Z(),
+                "VecRotX": node.Transform().VecRot().X(),
+                "VecRotY": node.Transform().VecRot().Y(),
+                "VecRotZ": node.Transform().VecRot().Z(),
+                "parent_idx": node.ParentIdx(),
+                "rig_idx": node.RigIdx(),
+                "effect_node": node.EffectNode()
+            })
+
+        base_bones = [
+            {
+                "inherit_scale": bone.InheritScale(),
+                "influence_skinning": bone.InfluenceSkinning()
+            }
+            for bone in (base_trskl.Bones(i) for i in range(base_trskl.BonesLength()))
+        ]
+
+        transform_nodes = base_transform_nodes
+        bones = base_bones
+
+        # --- Load extra TRSKL ---
+        with open(filepath, "rb") as f:
+            buf = bytearray(f.read())
+        extra_trskl = TRSKL.GetRootAsTRSKL(buf, 0)
+        rig_offset = extra_trskl.RigOffset()
+        extra_transform_nodes = []
+
+        for i in range(extra_trskl.TransformNodesLength()):
+            node = extra_trskl.TransformNodes(i)
+            name = node.Name().decode('utf-8')
+            rig_idx = node.RigIdx() + rig_offset
+            parent_idx = node.ParentIdx()
+            effect_node_name = node.EffectNode()
+
+            if effect_node_name:
+                effect_node_name = effect_node_name.decode('utf-8')
+                if effect_node_name in base_name_to_idx:
+                    parent_idx = base_name_to_idx[effect_node_name]
                 else:
-                    trskl_bone_struct_ptr_section_len = read_short(trskl)
-                    trskl_bone_struct_ptr_string = read_short(trskl)
-                    trskl_bone_struct_ptr_bone = read_short(trskl)
-                    trskl_bone_struct_ptr_c = read_short(trskl)
-                    trskl_bone_struct_ptr_d = read_short(trskl)
-                    trskl_bone_struct_ptr_parent = read_short(trskl)
-                    trskl_bone_struct_ptr_rig_id = read_short(trskl)
-                    trskl_bone_struct_ptr_bone_merge = read_short(trskl)
-                    trskl_bone_struct_ptr_h = read_short(trskl)
-                if trskl_bone_struct_ptr_bone_merge != 0:
-                    f_seek(trskl, bone_offset + trskl_bone_struct_ptr_bone_merge)
-                    bone_merge_start = f_tell(trskl) + read_long(trskl)
-                    f_seek(trskl, bone_merge_start)
-                    bone_merge_string_len = read_long(trskl)
-                    if bone_merge_string_len != 0:
-                        bone_merge_string = read_fixedstring(trskl, bone_merge_string_len)
-                    else:
-                        bone_merge_string = ""
-                if trskl_bone_struct_ptr_bone != 0:
-                    f_seek(trskl, bone_offset + trskl_bone_struct_ptr_bone)
-                    bone_pos_start = f_tell(trskl) + read_long(trskl)
-                    f_seek(trskl, bone_pos_start)
-                    bone_pos_struct = f_tell(trskl) - read_long(trskl)
-                    f_seek(trskl, bone_pos_struct)
-                    bone_pos_struct_len = read_short(trskl)
-                    if bone_pos_struct_len != 0x000A:
-                        raise AssertionError("Unexpected bone position struct length!")
-                    bone_pos_struct_section_len = read_short(trskl)
-                    bone_pos_struct_ptr_scl = read_short(trskl)
-                    bone_pos_struct_ptr_rot = read_short(trskl)
-                    bone_pos_struct_ptr_trs = read_short(trskl)
-                    f_seek(trskl, bone_pos_start + bone_pos_struct_ptr_trs)
-                    bone_tx = read_float(trskl)
-                    bone_ty = read_float(trskl)
-                    bone_tz = read_float(trskl)
-                    f_seek(trskl, bone_pos_start + bone_pos_struct_ptr_rot)
-                    bone_rx = read_float(trskl)
-                    bone_ry = read_float(trskl)
-                    bone_rz = read_float(trskl)
-                    f_seek(trskl, bone_pos_start + bone_pos_struct_ptr_scl)
-                    bone_sx = read_float(trskl)
-                    bone_sy = read_float(trskl)
-                    bone_sz = read_float(trskl)
-                    if trskl_bone_struct_ptr_string != 0:
-                        f_seek(trskl, bone_offset + trskl_bone_struct_ptr_string)
-                        bone_string_start = f_tell(trskl) + read_long(trskl)
-                        f_seek(trskl, bone_string_start)
-                        bone_str_len = read_long(trskl)
-                        bone_name = read_fixedstring(trskl, bone_str_len)
-                    if trskl_bone_struct_ptr_parent != 0x00:
-                        f_seek(trskl, bone_offset + trskl_bone_struct_ptr_parent)
-                        bone_parent = read_long(trskl)
-                    else:
-                        bone_parent = 0
-                    if str(trskl_bone_struct_ptr_rig_id) == "-1":
-                        trskl_bone_struct_ptr_rig_id = 99
-                    if trskl_bone_struct_ptr_rig_id != 0:
-                        f_seek(trskl, bone_offset + trskl_bone_struct_ptr_rig_id)
-                        bone_rig_id = read_long(trskl) + trskl_bone_adjust
-                        while len(bone_rig_array) <= bone_rig_id:
-                            bone_rig_array.append("")
-                        bone_rig_array[bone_rig_id] = bone_name
-                        bone_id_map[bone_name] = bone_rig_id
-                f_seek(trskl, bone_ret)
-        f_close(trskl)
-        bone_dict = {}
-        for bone_name, bone_rig_id in bone_id_map.items():
-            bone_dict[bone_name] = bone_rig_id
-        return bone_dict
+                    raise ValueError(f"Effect node '{effect_node_name}' not found in base skeleton.")
+            else:
+                parent_idx += rig_offset
+
+            extra_transform_nodes.append({
+                "name": name,
+                "VecTranslateX": node.Transform().VecTranslate().X(),
+                "VecTranslateY": node.Transform().VecTranslate().Y(),
+                "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                "VecScaleX": node.Transform().VecScale().X(),
+                "VecScaleY": node.Transform().VecScale().Y(),
+                "VecScaleZ": node.Transform().VecScale().Z(),
+                "VecRotX": node.Transform().VecRot().X(),
+                "VecRotY": node.Transform().VecRot().Y(),
+                "VecRotZ": node.Transform().VecRot().Z(),
+                "parent_idx": parent_idx,
+                "rig_idx": rig_idx,
+                "effect_node": effect_node_name
+            })
+
+        extra_bones = [
+            {
+                "inherit_scale": bone.InheritScale(),
+                "influence_skinning": bone.InfluenceSkinning()
+            }
+            for bone in (extra_trskl.Bones(i) for i in range(extra_trskl.BonesLength()))
+        ]
+
+        transform_nodes += extra_transform_nodes
+        bones += extra_bones
+
+    else:
+        # --- Load single TRSKL file ---
+        with open(filepath, "rb") as f:
+            buf = bytearray(f.read())
+        trskl_data = TRSKL.GetRootAsTRSKL(buf, 0)
+
+        for i in range(trskl_data.TransformNodesLength()):
+            node = trskl_data.TransformNodes(i)
+            transform_nodes.append({
+                "name": node.Name().decode('utf-8'),
+                "VecTranslateX": node.Transform().VecTranslate().X(),
+                "VecTranslateY": node.Transform().VecTranslate().Y(),
+                "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                "VecScaleX": node.Transform().VecScale().X(),
+                "VecScaleY": node.Transform().VecScale().Y(),
+                "VecScaleZ": node.Transform().VecScale().Z(),
+                "VecRotX": node.Transform().VecRot().X(),
+                "VecRotY": node.Transform().VecRot().Y(),
+                "VecRotZ": node.Transform().VecRot().Z(),
+                "parent_idx": node.ParentIdx() + 1,
+                "rig_idx": node.RigIdx(),
+            })
+        for i in range(trskl_data.BonesLength()):
+            bone = trskl_data.Bones(i)
+            bones.append({
+                "inherit_scale": bone.InheritScale(),
+                "influence_skinning": bone.InfluenceSkinning(),
+            })
+
+    # --- Build bone dict ---
+    bone_dict = {node["name"]: node["rig_idx"] for node in transform_nodes}
+    return bone_dict
+
 
 
 def export_trmbf_trmsh(export_settings: dict, bone_dict: dict,
@@ -704,4 +704,5 @@ def create_mesh_shape(mesh_obj: bpy.types.Object, export_settings: dict) -> Mesh
         mesh_shape.visShapes.append(vis_shape)
     mesh_shape.meshName = mesh_data["mesh_name"]
     mesh_shape.unk13 = mesh_data["unk13"]
+    mesh_shape.MorphShape = mesh_data["morph_shape"]
     return mesh_shape
