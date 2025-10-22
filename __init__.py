@@ -12,6 +12,8 @@ import sysconfig
 import subprocess
 from importlib import import_module
 import bpy
+
+from bpy.types import Panel, Operator, PropertyGroup
 from bpy.props import *
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper, ExportHelper
