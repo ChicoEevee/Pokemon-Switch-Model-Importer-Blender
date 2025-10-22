@@ -332,6 +332,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
             mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = "";mat_loweyemsk0 = "";mat_uppeyemsk0 = ""; mat_opacity_map = ""
             mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0.0; mat_uv_trs_v = 0.0
             mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0.0; mat_uv_trs2_v = 0.0
+            mat_spec_map0 = ""
             mat_uvcenter0_x = 0.0;mat_uvcenter0_y = 0.0
             mat_color_r = 1.0; mat_color_g = 1.0; mat_color_b = 1.0
             mat_color1_r = 1.0; mat_color1_g = 1.0; mat_color1_b = 1.0
@@ -401,7 +402,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                     if name == "NumMaterialLayer": mat_num_material_layer = int(value)
                     if name == "EyelidType": mat_eyelid_type = value
                     if name == "EnableColorTableMap": mat_enablecolortablemap = value
-                    
+                    if name == "SpecularMaskMap": mat_spec_map0 = value
                 if shader_name: mat_shader = shader_name
                 shaders.append({"shader_name": shader_name, "shader_values": shader_values})
 
@@ -536,6 +537,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                 "mat_sssmask0": mat_sssmask0,
                 "mat_loweyemsk0": mat_loweyemsk0,
                 "mat_uppeyemsk0": mat_uppeyemsk0,
+                "mat_spec_map0": mat_spec_map0,
                 "mat_eyelid_type": mat_eyelid_type,
                 "mat_uvcenter0_x": mat_uvcenter0_x,
                 "mat_uvcenter0_y": mat_uvcenter0_y,
@@ -881,6 +883,12 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                         roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
                         roughness_image_texture.image.colorspace_settings.name = "Non-Color"
                     material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Roughness'])
+
+                if os.path.exists(os.path.join(filep, mat["mat_spec_map0"][:-5] + textureextension)) == True:
+                    specular_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    specular_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
+                    specular_image_texture.image.colorspace_settings.name = "Non-Color"
+                    material.node_tree.links.new(specular_image_texture.outputs[0], shadegroupnodes.inputs['SpecularMaskMap'])
 
                 if mat["mat_enable_metallic_map"]:
                     roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
