@@ -343,6 +343,12 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
             #Need to figure out what does the others BaseColorLayer8 its related to LowerEyelidColor
             mat_color8_r = 1.0; mat_color8_g = 1.0; mat_color8_b = 1.0
 
+            mat_shcolor1_r = 1.0; mat_shcolor1_g = 1.0; mat_shcolor1_b = 1.0
+            mat_shcolor2_r = 1.0; mat_shcolor2_g = 1.0; mat_shcolor2_b = 1.0
+            mat_shcolor3_r = 1.0; mat_shcolor3_g = 1.0; mat_shcolor3_b = 1.0
+            mat_shcolor4_r = 1.0; mat_shcolor4_g = 1.0; mat_shcolor4_b = 1.0
+            mat_shcolor5_r = 1.0; mat_shcolor5_g = 1.0; mat_shcolor5_b = 1.0
+
             mat_emcolor1_r = 0.0; mat_emcolor1_g = 0.0; mat_emcolor1_b = 0.0
             mat_emcolor2_r = 0.0; mat_emcolor2_g = 0.0; mat_emcolor2_b = 0.0
             mat_emcolor3_r = 0.0; mat_emcolor3_g = 0.0; mat_emcolor3_b = 0.0
@@ -506,6 +512,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                 elif name == "EmissionColorLayer4": mat_emcolor4_r, mat_emcolor4_g, mat_emcolor4_b = color.R(), color.G(), color.B()
                 elif name == "EmissionColorLayer5": mat_emcolor5_r, mat_emcolor5_g, mat_emcolor5_b = color.R(), color.G(), color.B()
                 elif name == "SubsurfaceColor": mat_ssscolor_r, mat_ssscolor_g, mat_ssscolor_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColorLayer1": mat_shcolor1_r, mat_shcolor1_g, mat_shcolor1_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColorLayer2":  mat_shcolor2_r, mat_shcolor2_g, mat_shcolor2_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColorLayer3": mat_shcolor3_r, mat_shcolor3_g, mat_shcolor3_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColorLayer4": mat_shcolor4_r, mat_shcolor4_g, mat_shcolor4_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColorLayer5": mat_shcolor5_r, mat_shcolor5_g, mat_shcolor5_b = color.R(), color.G(), color.B()
                 elif name == "UVScaleOffset":
                     mat_uv_scale_u = color.R()
                     mat_uv_scale_v = color.G()
@@ -549,6 +560,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                 "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b,
                 "mat_color5_r": mat_color5_r, "mat_color5_g": mat_color5_g, "mat_color5_b": mat_color5_b,
                 "mat_color8_r": mat_color8_r, "mat_color8_g": mat_color8_g, "mat_color8_b": mat_color8_b,
+                "mat_shcolor1_r": mat_shcolor1_r, "mat_shcolor1_g": mat_shcolor1_g, "mat_shcolor1_b": mat_shcolor1_b,
+                "mat_shcolor2_r": mat_shcolor2_r, "mat_shcolor2_g": mat_shcolor2_g, "mat_shcolor2_b": mat_shcolor2_b,
+                "mat_shcolor3_r": mat_shcolor3_r, "mat_shcolor3_g": mat_shcolor3_g, "mat_shcolor3_b": mat_shcolor3_b,
+                "mat_shcolor4_r": mat_shcolor4_r, "mat_shcolor4_g": mat_shcolor4_g, "mat_shcolor4_b": mat_shcolor4_b,
+                "mat_shcolor5_r": mat_shcolor5_r, "mat_shcolor5_g": mat_shcolor5_g, "mat_shcolor5_b": mat_shcolor5_b,
                 "mat_emcolor1_r": mat_emcolor1_r, "mat_emcolor1_g": mat_emcolor1_g, "mat_emcolor1_b": mat_emcolor1_b,
                 "mat_emcolor2_r": mat_emcolor2_r, "mat_emcolor2_g": mat_emcolor2_g, "mat_emcolor2_b": mat_emcolor2_b,
                 "mat_emcolor3_r": mat_emcolor3_r, "mat_emcolor3_g": mat_emcolor3_g, "mat_emcolor3_b": mat_emcolor3_b,
@@ -689,6 +705,19 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                 shadegroupnodes.inputs['LayerMaskScale2'].default_value = mat["mat_lym_scale2"]
                 shadegroupnodes.inputs['LayerMaskScale3'].default_value = mat["mat_lym_scale3"]
                 shadegroupnodes.inputs['LayerMaskScale4'].default_value = mat["mat_lym_scale4"]
+
+                shcolor1 = (mat["mat_shcolor1_r"], mat["mat_shcolor1_g"], mat["mat_shcolor1_b"], 1.0)
+                shcolor2 = (mat["mat_shcolor2_r"], mat["mat_shcolor2_g"], mat["mat_shcolor2_b"], 1.0)
+                shcolor3 = (mat["mat_shcolor3_r"], mat["mat_shcolor3_g"], mat["mat_shcolor3_b"], 1.0)
+                shcolor4 = (mat["mat_shcolor4_r"], mat["mat_shcolor4_g"], mat["mat_shcolor4_b"], 1.0)
+                shcolor5 = (mat["mat_shcolor5_r"], mat["mat_shcolor5_g"], mat["mat_shcolor5_b"], 1.0)
+                
+                shadegroupnodes.inputs['ShadowingColor'].default_value = shcolor1
+                shadegroupnodes.inputs['ShadowingLayer1'].default_value = shcolor2
+                shadegroupnodes.inputs['ShadowingLayer2'].default_value = shcolor3
+                shadegroupnodes.inputs['ShadowingLayer3'].default_value = shcolor4
+                shadegroupnodes.inputs['ShadowingLayer4'].default_value = shcolor5
+                
                 if "Opaque" not in mat["mat_alpha_setting"]:
                     material.blend_method = 'BLEND'
                 if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
