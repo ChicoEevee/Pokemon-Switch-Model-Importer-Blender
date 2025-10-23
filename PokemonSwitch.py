@@ -512,11 +512,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                 elif name == "EmissionColorLayer4": mat_emcolor4_r, mat_emcolor4_g, mat_emcolor4_b = color.R(), color.G(), color.B()
                 elif name == "EmissionColorLayer5": mat_emcolor5_r, mat_emcolor5_g, mat_emcolor5_b = color.R(), color.G(), color.B()
                 elif name == "SubsurfaceColor": mat_ssscolor_r, mat_ssscolor_g, mat_ssscolor_b = color.R(), color.G(), color.B()
-                elif name == "ShadowingColorLayer1": mat_shcolor1_r, mat_shcolor1_g, mat_shcolor1_b = color.R(), color.G(), color.B()
-                elif name == "ShadowingColorLayer2":  mat_shcolor2_r, mat_shcolor2_g, mat_shcolor2_b = color.R(), color.G(), color.B()
-                elif name == "ShadowingColorLayer3": mat_shcolor3_r, mat_shcolor3_g, mat_shcolor3_b = color.R(), color.G(), color.B()
-                elif name == "ShadowingColorLayer4": mat_shcolor4_r, mat_shcolor4_g, mat_shcolor4_b = color.R(), color.G(), color.B()
-                elif name == "ShadowingColorLayer5": mat_shcolor5_r, mat_shcolor5_g, mat_shcolor5_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColor": mat_shcolor1_r, mat_shcolor1_g, mat_shcolor1_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColorLayer1":  mat_shcolor2_r, mat_shcolor2_g, mat_shcolor2_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColorLayer2": mat_shcolor3_r, mat_shcolor3_g, mat_shcolor3_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColorLayer3": mat_shcolor4_r, mat_shcolor4_g, mat_shcolor4_b = color.R(), color.G(), color.B()
+                elif name == "ShadowingColorLayer4": mat_shcolor5_r, mat_shcolor5_g, mat_shcolor5_b = color.R(), color.G(), color.B()
                 elif name == "UVScaleOffset":
                     mat_uv_scale_u = color.R()
                     mat_uv_scale_v = color.G()
@@ -713,10 +713,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                 shcolor5 = (mat["mat_shcolor5_r"], mat["mat_shcolor5_g"], mat["mat_shcolor5_b"], 1.0)
                 
                 shadegroupnodes.inputs['ShadowingColor'].default_value = shcolor1
-                shadegroupnodes.inputs['ShadowingLayer1'].default_value = shcolor2
-                shadegroupnodes.inputs['ShadowingLayer2'].default_value = shcolor3
-                shadegroupnodes.inputs['ShadowingLayer3'].default_value = shcolor4
-                shadegroupnodes.inputs['ShadowingLayer4'].default_value = shcolor5
+                shadegroupnodes.inputs['ShadowingColorLayer1'].default_value = shcolor2
+                shadegroupnodes.inputs['ShadowingColorLayer2'].default_value = shcolor3
+                shadegroupnodes.inputs['ShadowingColorLayer3'].default_value = shcolor4
+                shadegroupnodes.inputs['ShadowingColorLayer4'].default_value = shcolor5
                 
                 if "Opaque" not in mat["mat_alpha_setting"]:
                     material.blend_method = 'BLEND'
