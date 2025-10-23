@@ -886,7 +886,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
 
                 if os.path.exists(os.path.join(filep, mat["mat_spec_map0"][:-5] + textureextension)) == True:
                     specular_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    specular_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
+                    specular_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_spec_map0"][:-5] + textureextension))
                     specular_image_texture.image.colorspace_settings.name = "Non-Color"
                     material.node_tree.links.new(specular_image_texture.outputs[0], shadegroupnodes.inputs['SpecularMaskMap'])
 
