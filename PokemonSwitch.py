@@ -813,7 +813,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,rotate90):
                                 rgb = colorsfromtable[f"BaseColorTable{i}"]
                                 rgba = (rgb[0], rgb[1], rgb[2], 1.0)
                                 tablecolor.append(rgba)
-                            elif f"ShadowColorTable{i}" in colorsfromtable:
+                            if f"ShadowColorTable{i}" in colorsfromtable:
                                 rgb = colorsfromtable[f"ShadowColorTable{i}"]
                                 rgba = (rgb[0], rgb[1], rgb[2], 1.0)
                                 shadowcolor.append(rgba)
