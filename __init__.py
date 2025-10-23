@@ -481,7 +481,6 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         self.layout.prop(self, "multiple")
         self.layout.prop(self, "multiplesubs")
         self.layout.prop(self, "loadlods")
-        self.layout.prop(self, "use_shadow_table")
         self.layout.prop(self, "rotate90")
 
     def execute(self, context: bpy.types.Context):
@@ -506,7 +505,7 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
             file_list = sorted(os.listdir(directory))
             obj_list = [item for item in file_list if item.endswith(".trmdl")]
             for item in obj_list:
-                from_trmdlsv(directory, item, self.rare, self.loadlods,self.rotate90)
+                from_trmdlsv(directory, item, self.rare, self.loadlods, self.rotate90)
         else:
             filename = os.path.basename(self.filepath)
             from_trmdlsv(directory, filename, self.rare, self.loadlods, self.rotate90)
