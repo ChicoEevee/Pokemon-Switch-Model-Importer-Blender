@@ -63,7 +63,7 @@ def find_player_base_path(filep, chara_check):
     return None
 
 
-def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
+def from_trmdlsv(filep, trmdlname, rare, loadlods,rotate90):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdlname[:-6]))
@@ -95,7 +95,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
     if rare:
         trmtr_path = os.path.join(filep, Path(trmtr_name).stem + "_rare.trmtr")
     else:
-        trmtr_path = os.path.join(filep, trmtr_name)
+        trmtr_path = os.path.join(filep, trmtr_name) 
     trmsh = trmdl.Meshes(0).Filename().decode('utf-8')
     try:
         trmsh_lod2 = trmdl.Meshes(2).Filename().decode('utf-8')
@@ -216,6 +216,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                     ]
                     transform_nodes = base_transform_nodes + extra_transform_nodes
                     bones = base_bones + extra_bones
+                    print(transform_nodes)
             else:
                 with open(os.path.join(filep, trskl), "rb") as f:
                     buf = bytearray(f.read())
@@ -671,7 +672,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                         shadegroupnodes.inputs['BaseColor'].default_value = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 except:
                     print("")
-
+                
                 color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
                 color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
@@ -719,7 +720,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                 
                 if "Opaque" not in mat["mat_alpha_setting"]:
                     material.blend_method = 'BLEND'
-                if mat["mat_uv_scale_u"] > 1.0 or mat["mat_uv_scale_v"] > 1.0:
+                if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
                     tex_coord_node = material.node_tree.nodes.new(type="ShaderNodeTexCoord")
                     mapping_node = material.node_tree.nodes.new(type="ShaderNodeMapping")
                     mapping_node2 = material.node_tree.nodes.new(type="ShaderNodeMapping")
@@ -801,32 +802,37 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                         material.node_tree.links.new(combine.outputs[0], lym_image_texture.inputs[0])
                     material.node_tree.links.new(lym_image_texture.outputs[0], shadegroupnodes.inputs['Lym_color'])
                     material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
-
+                  
                 if mat["mat_enablecolortablemap"] == "True":
                     if os.path.exists(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension)) == True:
                         colorsfromtable = extract_2x2_colors_blender(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension), mat["mat_colortabledividenumber"],mat["mat_name"])
                         tablecolor = []
+                        shadowcolor = []
                         for i in range(mat["mat_colortabledividenumber"]):
-                            if use_shadow_table == True:
-                                key = f"ShadowColorTable{i}"
-                            else:
-                                key = f"BaseColorTable{i}"
-                            if key in colorsfromtable:
-                                rgb = colorsfromtable[key]
+                            if f"BaseColorTable{i}" in colorsfromtable:
+                                rgb = colorsfromtable[f"BaseColorTable{i}"]
                                 rgba = (rgb[0], rgb[1], rgb[2], 1.0)
                                 tablecolor.append(rgba)
+                            elif f"ShadowColorTable{i}" in colorsfromtable:
+                                rgb = colorsfromtable[f"ShadowColorTable{i}"]
+                                rgba = (rgb[0], rgb[1], rgb[2], 1.0)
+                                shadowcolor.append(rgba)
                         try:
                             if mat["mat_basecolor_index1"] > 0.1:
                                 shadegroupnodes.inputs['BaseColorLayer1'].default_value = tablecolor[mat["mat_basecolor_index1"]-1]
+                                shadegroupnodes.inputs['ShadowingColorLayer1'].default_value = shadowcolor[mat["mat_basecolor_index1"]-1]
                             if mat["mat_basecolor_index2"]> 0.1:
                                 shadegroupnodes.inputs['BaseColorLayer2'].default_value = tablecolor[mat["mat_basecolor_index2"]-1]
+                                shadegroupnodes.inputs['ShadowingColorLayer2'].default_value = shadowcolor[mat["mat_basecolor_index2"]-1]
                             if mat["mat_basecolor_index3"]> 0.1:
                                 shadegroupnodes.inputs['BaseColorLayer3'].default_value = tablecolor[mat["mat_basecolor_index3"]-1]
+                                shadegroupnodes.inputs['ShadowingColorLayer3'].default_value = shadowcolor[mat["mat_basecolor_index3"]-1]
                             if mat["mat_basecolor_index4"]> 0.1:
                                 shadegroupnodes.inputs['BaseColorLayer4'].default_value = tablecolor[mat["mat_basecolor_index4"]-1]
+                                shadegroupnodes.inputs['ShadowingColorLayer4'].default_value = shadowcolor[mat["mat_basecolor_index4"]-1]
                         except Exception as e:
                             print("colormaptable failed:", e, mat["mat_basecolor_index1"],mat["mat_basecolor_index2"],mat["mat_basecolor_index3"],mat["mat_basecolor_index4"])
-
+                          
                 if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
                     alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
@@ -836,6 +842,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                     material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
                     alb_image_texture.interpolation = "Closest"
 
+              
                 if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
                     opacity_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     opacity_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension))
@@ -919,6 +926,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                         roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
                         roughness_image_texture.image.colorspace_settings.name = "Non-Color"
                     material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Metallic'])
+
+ 
 
     if loadlods == False:
         trmsh_count = 1
