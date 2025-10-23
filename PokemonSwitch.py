@@ -918,6 +918,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,rotate90):
                     specular_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     specular_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_spec_map0"][:-5] + textureextension))
                     specular_image_texture.image.colorspace_settings.name = "Non-Color"
+                    if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                        material.node_tree.links.new(combine.outputs[0], specular_image_texture.inputs[0])
                     material.node_tree.links.new(specular_image_texture.outputs[0], shadegroupnodes.inputs['SpecularMaskMap'])
 
                 if mat["mat_enable_metallic_map"]:
