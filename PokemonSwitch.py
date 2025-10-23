@@ -632,7 +632,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
         mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
         
         if IN_BLENDER_ENV:
-            if not 'ScViShader' in bpy.data.materials or not 'ScViShader' in bpy.data.materials:
+            if not 'PokemonShader' in bpy.data.materials or not 'PokemonShader' in bpy.data.materials:
                 blend_path = os.path.join(os.path.dirname(__file__), "SCVIShader.blend")
                 try:
                     response = requests.get("https://raw.githubusercontent.com/ChicoEevee/Pokemon-Switch-V2-Model-Importer-Blender/master/SCVIShader.blend", stream=True)
@@ -644,10 +644,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods,use_shadow_table,rotate90):
                     data_to.materials = data_from.materials
                     print('! Loaded shader blend file.')
             for m, mat in enumerate(mat_data_array):
-                if "eye" in mat["mat_name"] and "pm" in trmtr_name:
-                    material = bpy.data.materials["ScViMonEyeShader"].copy()
-                else:
-                    material = bpy.data.materials["ScViShader"].copy()
+                material = bpy.data.materials["PokemonShader"].copy()
                     
                 material.name = mat["mat_name"]
                 materials.append(material)
