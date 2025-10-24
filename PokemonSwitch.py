@@ -368,7 +368,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
             mat_lym_scale1 = 1.0; mat_lym_scale2 = 1.0; mat_lym_scale3 = 1.0; mat_lym_scale4 = 1.0
             mat_basecolor_index1 = -1; mat_basecolor_index2 = -1; mat_basecolor_index3 = -1; mat_basecolor_index4 = -1; mat_basecolor_index5 = -1; mat_basecolor_index6 = -1; mat_basecolor_index7 = -1; mat_basecolor_index8 = -1; mat_basecolor_index9 = -1; mat_basecolor_index10 = -1; mat_basecolor_index11 = -1; mat_basecolor_index12 = -1; mat_basecolor_index13 = -1; mat_basecolor_index14 = -1; mat_basecolor_index15 = -1; mat_basecolor_index16 = -1; mat_basecolor_index17 = -1; mat_basecolor_index18 = -1; mat_basecolor_index19 = -1; mat_basecolor_index20 = -1; mat_basecolor_index21 = -1; mat_basecolor_index22 = -1; mat_basecolor_index23 = -1; mat_basecolor_index24 = -1; mat_basecolor_index25 = -1; mat_basecolor_index26 = -1; mat_basecolor_index27 = -1; mat_basecolor_index28 = -1; mat_basecolor_index29 = -1; mat_basecolor_index30 = -1; mat_basecolor_index31 = -1; mat_basecolor_index32 = -1; mat_basecolor_index33 = -1; mat_basecolor_index34 = -1; mat_basecolor_index35 = -1; mat_basecolor_index36 = -1; mat_basecolor_index37 = -1; mat_basecolor_index38 = -1; mat_basecolor_index39 = -1; mat_basecolor_index40 = -1; mat_colortabledividenumber = -1; mat_colortable_tex = ""; mat_enablecolortablemap = False
             mat_alpha_setting = ""
-
+            mat_enablealpha = False
             mat_enable_base_color_map = False
             mat_enable_normal_map = False
             mat_enable_ao_map = False
@@ -407,6 +407,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                     if name == "NumMaterialLayer": mat_num_material_layer = int(value)
                     if name == "EyelidType": mat_eyelid_type = value
                     if name == "EnableColorTableMap": mat_enablecolortablemap = value
+                    if name == "EnableAlphaTest": mat_enablealpha = value
                 if shader_name: mat_shader = shader_name
                 shaders.append({"shader_name": shader_name, "shader_values": shader_values})
 
@@ -643,6 +644,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                 "mat_basecolor_index39": mat_basecolor_index39,
                 "mat_basecolor_index40": mat_basecolor_index40,
                 "mat_alpha_setting": mat_alpha_setting,
+                "mat_enablealpha": mat_enablealpha,
                 "mat_metallic": mat_metallic,
                 "mat_probe_map0": mat_probe_map0
             })
@@ -721,7 +723,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                 
                 if "Opaque" not in mat["mat_alpha_setting"]:
                     material.blend_method = 'BLEND'
-                if mat["mat_uv_scale_u"] > 1.0 or mat["mat_uv_scale_v"] > 1.0:
+                if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
                     tex_coord_node = material.node_tree.nodes.new(type="ShaderNodeTexCoord")
                     mapping_node = material.node_tree.nodes.new(type="ShaderNodeMapping")
                     mapping_node2 = material.node_tree.nodes.new(type="ShaderNodeMapping")
@@ -775,7 +777,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
 
                     compare = material.node_tree.nodes.new(type="ShaderNodeMath")
                     compare.operation = 'GREATER_THAN'
-                    compare.inputs[1].default_value = mat["mat_uv_scale_u"] / 2
+                    compare.inputs[1].default_value = (mat["mat_uv_scale_u"] / 2) - 0.00001
                     material.node_tree.links.new(sep.outputs['X'], compare.inputs[0])
     
                     flip = material.node_tree.nodes.new(type="ShaderNodeMath")
@@ -803,7 +805,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                         material.node_tree.links.new(combine.outputs[0], lym_image_texture.inputs[0])
                     material.node_tree.links.new(lym_image_texture.outputs[0], shadegroupnodes.inputs['Lym_color'])
                     material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
-
+                  
                 if mat["mat_enablecolortablemap"] == "True":
                     if os.path.exists(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension)) == True:
                         colorsfromtable = extract_2x2_colors_blender(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension), mat["mat_colortabledividenumber"],mat["mat_name"])
@@ -833,16 +835,18 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                                 shadegroupnodes.inputs['ShadowingColorLayer4'].default_value = shadowcolor[mat["mat_basecolor_index4"]-1]
                         except Exception as e:
                             print("colormaptable failed:", e, mat["mat_basecolor_index1"],mat["mat_basecolor_index2"],mat["mat_basecolor_index3"],mat["mat_basecolor_index4"])
-
+                          
                 if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
                     alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                     material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
                     if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
                         material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
-                    material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
+                    if mat["mat_enablealpha"] == True:
+                        material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
                     alb_image_texture.interpolation = "Closest"
 
+              
                 if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
                     opacity_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     opacity_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension))
@@ -871,8 +875,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                                     break
                         material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
                 except:
-                    print("Issue loading hightlight map")
-                #EyelidType Upper is Disabled for now~
+                    print("Issue loading hightlight map"
+
                 if mat["mat_eyelid_type"] == "Lower":
                     eyelid_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     if mat["mat_eyelid_type"] == "Lower":
@@ -928,11 +932,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                         roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
                         roughness_image_texture.image.colorspace_settings.name = "Non-Color"
                     material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Metallic'])
-
+                
                 if "fresnel_prb" in mat["mat_probe_map0"] or "fresnel_a_prb" in mat["mat_probe_map0"] or "fresnel_b_prb" in mat["mat_probe_map0"]:
                     shadegroupnodes.inputs['fresnel_prb'].default_value = 1.0
 
-
+ 
 
     if loadlods == False:
         trmsh_count = 1
