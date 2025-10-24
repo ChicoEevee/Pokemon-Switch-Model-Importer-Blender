@@ -134,8 +134,8 @@ def get_trmsh_data(obj: bpy.types.Object, settings: dict) -> dict:
             "z": round(maxbbox.z, 6)
         }
     }
-    clip_sphere_pos = (min_bbox + max_bbox) / 2
-    clip_sphere_radius = (max_bbox - min_bbox).length / 2
+    clip_sphere_pos = (minbbox + maxbbox) / 2
+    clip_sphere_radius = (maxbbox - minbbox).length / 2
     clip_sphere = {
         "x": round(clip_sphere_pos.x, 6),
         "y": round(clip_sphere_pos.y, 6),
