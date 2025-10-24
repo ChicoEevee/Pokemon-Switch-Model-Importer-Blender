@@ -433,7 +433,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                 if texture_name == "ColorTableMap": mat_colortable_tex = texture_file
                 if texture_name == "OpacityMap1": mat_opacity_map = texture_file
                 if texture_name == "SpecularMaskMap": mat_spec_map0 = texture_file
-                if texture_name == "LocalReflectionMap": LocalReflectionMap = texture_file
+                if texture_name == "LocalReflectionMap": mat_reflection_map0 = texture_file
 
             for f in range(mat_fb.FloatParameterLength()):
                 fparam = mat_fb.FloatParameter(f)
