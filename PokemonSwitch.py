@@ -806,9 +806,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                     if img.size[1] > 2:
                         lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
-                        lym_image_texture.interpolation = "Closest"
                         lym_image_texture.image.colorspace_settings.name = "Non-Color"
                         if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            lym_image_texture.interpolation = "Closest"
                             material.node_tree.links.new(combine.outputs[0], lym_image_texture.inputs[0])
                         material.node_tree.links.new(lym_image_texture.outputs[0], shadegroupnodes.inputs['Lym_color'])
                         material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
@@ -852,10 +852,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                         alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                         material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
                         if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            alb_image_texture.interpolation = "Closest"
                             material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
                         if mat["mat_enablealpha"] == "True":
                             material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
-                        alb_image_texture.interpolation = "Closest"
 
                 if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
                     opacity_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
