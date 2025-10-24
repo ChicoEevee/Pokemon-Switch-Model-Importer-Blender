@@ -885,7 +885,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                                     break
                         material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
                 except:
-                    print("Issue loading hightlight map"
+                    print("Issue loading hightlight map")
 
                 if mat["mat_eyelid_type"] == "Lower":
                     eyelid_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
