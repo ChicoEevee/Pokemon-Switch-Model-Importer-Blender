@@ -797,15 +797,19 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                     material.node_tree.links.new(sep.outputs['Z'], combine.inputs['Z'])
 
                 if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)) == True:
-                    lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
-                    lym_image_texture.interpolation = "Closest"
-                    lym_image_texture.image.colorspace_settings.name = "Non-Color"
-                    if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
-                        material.node_tree.links.new(combine.outputs[0], lym_image_texture.inputs[0])
-                    material.node_tree.links.new(lym_image_texture.outputs[0], shadegroupnodes.inputs['Lym_color'])
-                    material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
-                  
+                    texture_path = os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)
+                    img = bpy.data.images.load(texture_path)
+                    if img.size[1] > 2:
+                        lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
+                        lym_image_texture.interpolation = "Closest"
+                        lym_image_texture.image.colorspace_settings.name = "Non-Color"
+                        if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            material.node_tree.links.new(combine.outputs[0], lym_image_texture.inputs[0])
+                        material.node_tree.links.new(lym_image_texture.outputs[0], shadegroupnodes.inputs['Lym_color'])
+                        material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
+                    else:
+                        shadegroupnodes.inputs['Lym_color'].default_value = (1.0,0.0,0.0,1.0)
                 if mat["mat_enablecolortablemap"] == "True":
                     if os.path.exists(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension)) == True:
                         colorsfromtable = extract_2x2_colors_blender(os.path.join(filep, mat["mat_colortable_tex"][:-5] + textureextension), mat["mat_colortabledividenumber"],mat["mat_name"])
@@ -837,14 +841,17 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                             print("colormaptable failed:", e, mat["mat_basecolor_index1"],mat["mat_basecolor_index2"],mat["mat_basecolor_index3"],mat["mat_basecolor_index4"])
                           
                 if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
-                    alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
-                    material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
-                    if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
-                        material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
-                    if mat["mat_enablealpha"] == "True":
-                        material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
-                    alb_image_texture.interpolation = "Closest"
+                    texture_path = os.path.join(filep, mat["mat_col0"][:-5] + textureextension)
+                    img = bpy.data.images.load(texture_path)
+                    if img.size[1] > 2:
+                        alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
+                        material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
+                        if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
+                        if mat["mat_enablealpha"] == "True":
+                            material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
+                        alb_image_texture.interpolation = "Closest"
 
               
                 if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
