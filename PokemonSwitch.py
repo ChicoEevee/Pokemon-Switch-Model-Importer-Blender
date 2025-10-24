@@ -931,7 +931,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                         roughness_image_texture.image.colorspace_settings.name = "Non-Color"
                     material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Metallic'])
                 
-                if "fresnel_prb" in mat["mat_probe_map0"]:
+                if "fresnel_prb" in mat["mat_probe_map0"] or "fresnel_a_prb" in mat["mat_probe_map0"] or "fresnel_b_prb" in mat["mat_probe_map0"]:
                     shadegroupnodes.inputs['fresnel_prb'].default_value = 1.0
 
  
