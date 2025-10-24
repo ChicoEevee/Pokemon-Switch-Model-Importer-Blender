@@ -661,12 +661,12 @@ def create_mesh_shape(mesh_obj: bpy.types.Object, export_settings: dict) -> Mesh
     mesh_shape.bounds = BoundingBoxT()
     mesh_shape.bounds.min = Vec3T()
     mesh_shape.bounds.min.x = mesh_data["bounds"]["min"]["x"]
-    mesh_shape.bounds.min.x = mesh_data["bounds"]["min"]["y"]
-    mesh_shape.bounds.min.x = mesh_data["bounds"]["min"]["z"]
+    mesh_shape.bounds.min.y = mesh_data["bounds"]["min"]["y"]
+    mesh_shape.bounds.min.z = mesh_data["bounds"]["min"]["z"]
     mesh_shape.bounds.max = Vec3T()
     mesh_shape.bounds.max.x = mesh_data["bounds"]["max"]["x"]
-    mesh_shape.bounds.max.x = mesh_data["bounds"]["max"]["y"]
-    mesh_shape.bounds.max.x = mesh_data["bounds"]["max"]["z"]
+    mesh_shape.bounds.max.y = mesh_data["bounds"]["max"]["y"]
+    mesh_shape.bounds.max.z = mesh_data["bounds"]["max"]["z"]
     mesh_shape.polygonType = mesh_data["polygon_type"]
     mesh_shape.attributes = []
     for mesh_data_attribute in mesh_data["attributes"]:
