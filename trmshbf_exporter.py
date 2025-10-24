@@ -107,19 +107,31 @@ def get_trmsh_data(obj: bpy.types.Object, settings: dict) -> dict:
     :returns: Dict of TRMSH file data.
     """
     assert obj.type == "MESH", "Selected object is not mesh."
-    bbox_co = [Vector(co) for co in obj.bound_box]
-    min_bbox = min(bbox_co)
-    max_bbox = max(bbox_co)
+    bboxco_x = [Vector(co).x for co in obj.bound_box]
+    bboxco_y = [Vector(co).y for co in obj.bound_box]
+    bboxco_z = [Vector(co).z for co in obj.bound_box]
+
+    minbbox = Vector((
+        min(bboxco_x),
+        min(bboxco_y),
+        min(bboxco_z)
+    ))
+    maxbbox = Vector((
+        max(bboxco_x),
+        max(bboxco_y),
+        max(bboxco_z)
+    ))
+
     bbox = {
         "min": {
-            "x": round(min_bbox.x, 6),
-            "y": round(min_bbox.y, 6),
-            "z": round(min_bbox.z, 6),
+            "x": round(minbbox.x, 6),
+            "y": round(minbbox.y, 6),
+            "z": round(minbbox.z, 6)
         },
         "max": {
-            "x": round(max_bbox.x, 6),
-            "y": round(max_bbox.y, 6),
-            "z": round(max_bbox.z, 6),
+            "x": round(maxbbox.x, 6),
+            "y": round(maxbbox.y, 6),
+            "z": round(maxbbox.z, 6)
         }
     }
     clip_sphere_pos = (min_bbox + max_bbox) / 2
@@ -251,8 +263,7 @@ def get_trmsh_data(obj: bpy.types.Object, settings: dict) -> dict:
         "influence": [{"index": 1, "scale": 36.0}],
         "vis_shapes": [],
         "mesh_name": obj.name,
-        "unk13": 0,
-        "morph_shape": []
+        "unk13": 0
     }
     return mesh
 
@@ -568,8 +579,11 @@ def trskl_to_dict(filepath: str, use_base_trskl: bool = False, base_trskl_path: 
                 "influence_skinning": bone.InfluenceSkinning(),
             })
 
-    # --- Build bone dict ---
-    bone_dict = {node["name"]: node["rig_idx"] for node in transform_nodes}
+    bone_id_map = {node["name"]: node["rig_idx"] for node in transform_nodes}
+	
+    bone_dict = {}
+    for bone_name, bone_rig_id in bone_id_map.items():
+        bone_dict[bone_name] = bone_rig_id
     return bone_dict
 
 
@@ -601,7 +615,7 @@ def export_trmbf_trmsh(export_settings: dict, bone_dict: dict,
     trmbf = builder.Output()
     trmsh = TRMSHT()
     trmsh.meshes = meshes
-    trmsh.bufferName = buffer_name
+    trmsh.bufferName = buffer_name.replace("trskl","trmbf")
     builder = flatbuffers.Builder()
     trmsh = trmsh.Pack(builder)
     builder.Finish(trmsh)
@@ -704,5 +718,4 @@ def create_mesh_shape(mesh_obj: bpy.types.Object, export_settings: dict) -> Mesh
         mesh_shape.visShapes.append(vis_shape)
     mesh_shape.meshName = mesh_data["mesh_name"]
     mesh_shape.unk13 = mesh_data["unk13"]
-    mesh_shape.MorphShape = mesh_data["morph_shape"]
     return mesh_shape
