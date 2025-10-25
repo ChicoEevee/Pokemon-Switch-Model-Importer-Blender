@@ -1813,7 +1813,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                                                     MorphVert_array.append(vert_array[v])
                                                     MorphNormal_array.append(normal_array[v])
                                                 for v in range(morphbuffergroupsbytecount // 0x1C):
-                                                    #Morphs always seem to use this setup.
                                                     vx = readfloat(trmbf)
                                                     vy = readfloat(trmbf)
                                                     vz = readfloat(trmbf)
@@ -1900,15 +1899,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                                 # # vertex colours
                                 color_layer = new_object.data.vertex_colors.new(name="Color")
                                 new_object.data.vertex_colors.active = color_layer
-                                #print(f"color_array: {len(color_array)}")
-                                #print(f"polygons: {len(new_object.data.polygons)}")
+                                
                                 for i, poly in enumerate(new_object.data.polygons):
-                                    #print(f"poly: {i}")
                                     for v, vert in enumerate(poly.vertices):
                                         loop_index = poly.loop_indices[v]
-                                
-                                        #print(f"loop_index: {loop_index}")
-                                        #print(color_array[vert][0], color_array[vert][1], color_array[vert][2], alpha_array[vert])
                                         
                                         if alpha_array[vert] == 0:
                                             alpha_array[vert] = 1
@@ -1951,10 +1945,15 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                                 except:
                                     continue    
                                 #normals
+                                
+                                loop_normals = []
+                                for poly in new_object.data.polygons:
+                                    for vert_idx in poly.vertices:
+                                        loop_normals.append(mathutils.Vector(normal_array[vert_idx]))
+
+                                new_object.data.normals_split_custom_set(loop_normals)
                                 if blender_version[0] < 3:
                                     new_object.data.use_auto_smooth = True
-
-                                new_object.data.normals_split_custom_set_from_vertices(normal_array)
 
                                 new_object.data.update()
                                 new_collection.objects.link(new_object)
