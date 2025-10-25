@@ -658,8 +658,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                 blend_path = os.path.join(os.path.dirname(__file__), "SCVIShader.blend")
                 try:
                     response = requests.get("https://raw.githubusercontent.com/ChicoEevee/Pokemon-Switch-V2-Model-Importer-Blender/master/SCVIShader.blend", stream=True)
-                    with open(blend_path, 'wb') as file:
-                        file.write(response.content)
+                    if response.status_code == 200:
+                        with open(blend_path, 'wb') as file:
+                            file.write(response.content)
+                    else:
+                        print("Offline Mode")
                 except:
                     print("Offline Mode")
                 with bpy.data.libraries.load(blend_path, link=False) as (data_from, data_to):
