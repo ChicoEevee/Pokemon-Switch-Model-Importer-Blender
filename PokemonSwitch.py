@@ -854,8 +854,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                         if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
                             alb_image_texture.interpolation = "Closest"
                             material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
-                        if mat["mat_enablealpha"] == "True":
-                            material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
+                        material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
 
                 if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
                     opacity_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
