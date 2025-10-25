@@ -1945,15 +1945,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                                 except:
                                     continue    
                                 #normals
-                                
-                                loop_normals = []
-                                for poly in new_object.data.polygons:
-                                    for vert_idx in poly.vertices:
-                                        loop_normals.append(mathutils.Vector(normal_array[vert_idx]))
-
-                                new_object.data.normals_split_custom_set(loop_normals)
                                 if blender_version[0] < 3:
                                     new_object.data.use_auto_smooth = True
+                                new_object.data.normals_split_custom_set(normal_array)
 
                                 new_object.data.update()
                                 new_collection.objects.link(new_object)
