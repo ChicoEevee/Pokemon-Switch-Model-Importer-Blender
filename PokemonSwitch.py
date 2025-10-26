@@ -866,6 +866,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                 try:
                     if mat["mat_enable_highlight_map"]:
                         highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        base_path = os.path.join(filep, mat["mat_lym0"][:-5])
                         try:
                             highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + textureextension))
                         except:
