@@ -331,7 +331,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
             mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = "";mat_loweyemsk0 = "";mat_uppeyemsk0 = ""; mat_opacity_map = ""
             mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0.0; mat_uv_trs_v = 0.0
             mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0.0; mat_uv_trs2_v = 0.0
-            mat_spec_map0 = ""; mat_probe_map0 = ""
+            mat_spec_map0 = ""; mat_probe_map0 = ""; mat_reflec_map0 = ""
             mat_uvcenter0_x = 0.0;mat_uvcenter0_y = 0.0
             mat_color_r = 1.0; mat_color_g = 1.0; mat_color_b = 1.0
             mat_color1_r = 1.0; mat_color1_g = 1.0; mat_color1_b = 1.0
@@ -435,6 +435,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                 if texture_name == "OpacityMap1": mat_opacity_map = texture_file
                 if texture_name == "SpecularMaskMap": mat_spec_map0 = texture_file
                 if texture_name == "LocalSpecularProbe": mat_probe_map0 = texture_file
+                if texture_name == "LocalReflectionMap": mat_reflec_map0 = texture_file
 
             for f in range(mat_fb.FloatParameterLength()):
                 fparam = mat_fb.FloatParameter(f)
@@ -498,6 +499,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                 elif name == "BaseColorIndex38": mat_basecolor_index38 = value
                 elif name == "BaseColorIndex39": mat_basecolor_index39 = value
                 elif name == "BaseColorIndex40": mat_basecolor_index40 = value
+
             for f in range(mat_fb.Float4ParameterLength()):
                 fparam = mat_fb.Float4Parameter(f)
                 name = fparam.ColorName().decode("utf-8")
@@ -649,6 +651,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                 "mat_enablealpha": mat_enablealpha,
                 "mat_metallic": mat_metallic,
                 "mat_probe_map0": mat_probe_map0,
+                "mat_reflec_map0": mat_reflec_map0,
                 "mat_spec_intensity": mat_spec_intensity
             })
         mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
