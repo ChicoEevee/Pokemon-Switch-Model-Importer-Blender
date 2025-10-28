@@ -951,6 +951,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
                     shadegroupnodes.inputs['fresnel_prb'].default_value = 1.0
                 if "metal_default_prb" in mat["mat_probe_map0"]:
                     shadegroupnodes.inputs['metal_prb'].default_value = 1.0
+                else:
+                    shadegroupnodes.inputs['metal_prb'].default_value = 0.0
+
+
     if loadlods == False:
         trmsh_count = 1
                         
