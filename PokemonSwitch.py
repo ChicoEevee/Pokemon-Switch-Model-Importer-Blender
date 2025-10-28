@@ -63,7 +63,7 @@ def find_player_base_path(filep, chara_check):
     return None
 
 
-def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
+def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdlname[:-6]))
@@ -949,6 +949,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90):
 
                 if "fresnel_prb" in mat["mat_probe_map0"] or "fresnel_a_prb" in mat["mat_probe_map0"] or "fresnel_b_prb" in mat["mat_probe_map0"]:
                     shadegroupnodes.inputs['fresnel_prb'].default_value = 1.0
+                if enable_metal_prb == True:
+                    shadegroupnodes.inputs['metal_prb'].default_value = 1.0
+
 
     if loadlods == False:
         trmsh_count = 1

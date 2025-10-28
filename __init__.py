@@ -471,6 +471,12 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         description="Just Rotation.",
         default=False
     )
+    enable_metal_prb: BoolProperty(
+        name="Enable Metal Probe",
+        description="Enables fake metal reflection.",
+        default=False
+    )
+
 
     def draw(self, context: bpy.types.Context):
         """
@@ -482,6 +488,7 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         self.layout.prop(self, "multiplesubs")
         self.layout.prop(self, "loadlods")
         self.layout.prop(self, "rotate90")
+        self.layout.prop(self, "enable_metal_prb")
 
     def execute(self, context: bpy.types.Context):
         """
@@ -500,15 +507,15 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
                         trmdl_files.append((root, item))
             trmdl_files.sort(key=lambda x: os.path.join(x[0], x[1]))
             for root, item in trmdl_files:
-                from_trmdlsv(root, item, self.rare, self.loadlods, self.rotate90)
+                from_trmdlsv(root, item, self.rare, self.loadlods, self.rotate90, self.enable_metal_prb)
         elif self.multiple:
             file_list = sorted(os.listdir(directory))
             obj_list = [item for item in file_list if item.endswith(".trmdl")]
             for item in obj_list:
-                from_trmdlsv(directory, item, self.rare, self.loadlods, self.rotate90)
+                from_trmdlsv(directory, item, self.rare, self.loadlods, self.rotate90, self.enable_metal_prb)
         else:
             filename = os.path.basename(self.filepath)
-            from_trmdlsv(directory, filename, self.rare, self.loadlods, self.rotate90)
+            from_trmdlsv(directory, filename, self.rare, self.loadlods, self.rotate90, self.enable_metal_prb)
 
         return {"FINISHED"}
 
