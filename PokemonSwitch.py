@@ -811,9 +811,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                         lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
                         lym_image_texture.image.colorspace_settings.name = "Non-Color"
-                        if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
-                            lym_image_texture.interpolation = "Closest"
-                            material.node_tree.links.new(combine.outputs[0], lym_image_texture.inputs[0])
+                        width, height = lym_image_texture.image.size
+                        if width != height:
+                            if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                                lym_image_texture.interpolation = "Closest"
+                                material.node_tree.links.new(combine.outputs[0], lym_image_texture.inputs[0])
                         material.node_tree.links.new(lym_image_texture.outputs[0], shadegroupnodes.inputs['Lym_color'])
                         material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
                     else:
@@ -855,17 +857,21 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                         alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                         material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
-                        if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
-                            alb_image_texture.interpolation = "Closest"
-                            material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
+                        width, height = alb_image_texture.image.size
+                        if width != height:
+                            if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                                alb_image_texture.interpolation = "Closest"
+                                material.node_tree.links.new(combine.outputs[0], alb_image_texture.inputs[0])
                         material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
 
                 if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
                     opacity_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     opacity_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension))
                     material.node_tree.links.new(opacity_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
-                    if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
-                        material.node_tree.links.new(combine.outputs[0], opacity_image_texture.inputs[0])
+                    width, height = opacity_image_texture.image.size
+                    if width != height:
+                        if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            material.node_tree.links.new(combine.outputs[0], opacity_image_texture.inputs[0])
                 try:
                     if mat["mat_enable_highlight_map"]:
                         highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -890,7 +896,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                         material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
                 except:
                     print("Issue loading hightlight map")
-
+                #EyelidType Upper is Disabled for now~
                 if mat["mat_eyelid_type"] == "Lower":
                     eyelid_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     if mat["mat_eyelid_type"] == "Lower":
@@ -936,8 +942,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                     specular_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     specular_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_spec_map0"][:-5] + textureextension))
                     specular_image_texture.image.colorspace_settings.name = "Non-Color"
-                    if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
-                        material.node_tree.links.new(combine.outputs[0], specular_image_texture.inputs[0])
+                    width, height = specular_image_texture.image.size
+                    if width != height:
+                        if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            material.node_tree.links.new(combine.outputs[0], specular_image_texture.inputs[0])
                     material.node_tree.links.new(specular_image_texture.outputs[0], shadegroupnodes.inputs['SpecularMaskMap'])
 
                 if mat["mat_enable_metallic_map"]:
@@ -992,8 +1000,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                     trmbf_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, trmbf_struct)
                     trmbf_struct_len = readshort(trmbf)
 
-                    if trmbf_struct_len != 0x0008:
-                        raise AssertionError("Unexpected TRMBF header struct length!")
                     trmbf_struct_section_len = readshort(trmbf)
                     trmbf_struct_start = readshort(trmbf)
                     trmbf_struct_buffer = readshort(trmbf)
