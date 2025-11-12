@@ -5,7 +5,7 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.sVec3 import sVec3, sVec3T
+from .sVec3 import sVec3, sVec3T
 
 np = import_numpy()
 

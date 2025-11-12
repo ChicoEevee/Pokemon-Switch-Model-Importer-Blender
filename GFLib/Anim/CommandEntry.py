@@ -5,11 +5,11 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.ByteDataTrack import ByteDataTrackT
-from GFLib.Anim.DataTrack import DataTrackCreator
-from GFLib.Anim.FloatDataTrack import FloatDataTrackT
-from GFLib.Anim.IntDataTrack import IntDataTrackT
-from GFLib.Anim.StringDataTrack import StringDataTrackT
+from .ByteDataTrack import ByteDataTrackT
+from .DataTrack import DataTrackCreator
+from .FloatDataTrack import FloatDataTrackT
+from .IntDataTrack import IntDataTrackT
+from .StringDataTrack import StringDataTrackT
 
 np = import_numpy()
 

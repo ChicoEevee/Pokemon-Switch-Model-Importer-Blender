@@ -5,9 +5,9 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.ColorEntry import ColorEntry, ColorEntryT
-from GFLib.Anim.FlagEntry import FlagEntry, FlagEntryT
-from GFLib.Anim.ShaderEntry import ShaderEntry, ShaderEntryT
+from .ColorEntry import ColorEntry, ColorEntryT
+from .FlagEntry import FlagEntry, FlagEntryT
+from .ShaderEntry import ShaderEntry, ShaderEntryT
 
 np = import_numpy()
 

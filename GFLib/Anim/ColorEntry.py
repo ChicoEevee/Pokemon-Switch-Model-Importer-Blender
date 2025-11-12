@@ -5,11 +5,11 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.DynamicVectorTrack import DynamicVectorTrackT
-from GFLib.Anim.FixedVectorTrack import FixedVectorTrackT
-from GFLib.Anim.Framed16VectorTrack import Framed16VectorTrackT
-from GFLib.Anim.Framed8VectorTrack import Framed8VectorTrackT
-from GFLib.Anim.VectorTrack import VectorTrackCreator
+from .DynamicVectorTrack import DynamicVectorTrackT
+from .FixedVectorTrack import FixedVectorTrackT
+from .Framed16VectorTrack import Framed16VectorTrackT
+from .Framed8VectorTrack import Framed8VectorTrackT
+from .VectorTrack import VectorTrackCreator
 
 np = import_numpy()
 

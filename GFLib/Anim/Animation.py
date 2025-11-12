@@ -5,11 +5,11 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.BoneAnimation import BoneAnimation, BoneAnimationT
-from GFLib.Anim.CommandAnimation import CommandAnimation, CommandAnimationT
-from GFLib.Anim.Info import InfoT, Info
-from GFLib.Anim.MaterialAnimation import MaterialAnimation, MaterialAnimationT
-from GFLib.Anim.SkinAnimation import SkinAnimation, SkinAnimationT
+from .BoneAnimation import BoneAnimation, BoneAnimationT
+from .CommandAnimation import CommandAnimation, CommandAnimationT
+from .Info import InfoT, Info
+from .MaterialAnimation import MaterialAnimation, MaterialAnimationT
+from .SkinAnimation import SkinAnimation, SkinAnimationT
 
 np = import_numpy()
 

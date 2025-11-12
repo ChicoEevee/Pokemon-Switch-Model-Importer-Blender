@@ -545,14 +545,14 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         description="Offset to apply to animation during import, in frames",
         default=1
     )
-    use_scene_end: BoolProperty(
+    set_scene_end: BoolProperty(
         name="Set end Scene range",
         description="Set Scene playback end frame to last frame of animation",
         default=False
     )
     nla_import: BoolProperty(
         name="Add to NLA",
-        description="Adds the Action to the NLA.",
+        description="Adds imported animation to the NLA",
         default=False
     )
 
@@ -575,9 +575,9 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                 try:
                     import_animation(context, file_path, self.ignore_origin_location,
                                      context.scene.frame_start if self.use_scene_start
-                                     else self.anim_offset, self.use_scene_end, self.nla_import)
+                                     else self.anim_offset, self.set_scene_end, self.nla_import)
                 except OSError as e:
-                    self.report({"INFO"}, f"Failed to import {file_path}. {str(e)}")
+                    self.report({"INFO"}, f"Failed to import {file_path}. {e}")
                 else:
                     b = True
                 finally:
@@ -588,24 +588,24 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         try:
             import_animation(context, self.filepath, self.ignore_origin_location,
                              context.scene.frame_start if self.use_scene_start
-                             else self.anim_offset, self.use_scene_end, self.nla_import)
+                             else self.anim_offset, self.set_scene_end, self.nla_import)
         except OSError as e:
-            self.report({"ERROR"}, f"Failed to import {self.filepath}. {str(e)}")
+            self.report({"ERROR"}, f"Failed to import {self.filepath}. {e}")
             return {"CANCELLED"}
         return {"FINISHED"}
 
-    def draw(self, context: bpy.types.Context):
+    def draw(self, _context: bpy.types.Context):
         """
         Drawing importer's menu.
-        :param context: Blender's context.
+        :param _context: Blender's context.
         """
         self.layout.prop(self, "ignore_origin_location")
         self.layout.prop(self, "use_scene_start")
+        self.layout.prop(self, "set_scene_end")
+        self.layout.prop(self, "nla_import")
         sub = self.layout.column()
         sub.enabled = not self.use_scene_start
         sub.prop(self, "anim_offset")
-        self.layout.prop(self, "use_scene_end")
-        self.layout.prop(self, "nla_import")
 
 
 def on_export_format_changed(struct: bpy.types.bpy_struct, context: bpy.types.Context):
@@ -642,7 +642,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
     """
     bl_idname = "export_scene.gfbanm"
     bl_label = "Export GFBANM/TRANM"
-    bl_description = "Export current action as Nintendo Switch Pokémon Animation file"
+    bl_description = "Export current Armature action as Nintendo Switch Pokémon Animation file"
     bl_options = {"PRESET", "UNDO"}
     filename_ext = ""
     filter_glob: StringProperty(default="*.gfbanm", options={"HIDDEN"})
@@ -651,10 +651,11 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
     export_format: EnumProperty(
         name="Format",
         items=(("GFBANM", "GFBANM (.gfbanm)",
-                "Exports action in format used by Pokémon Sword/Shield."),
+                "Exports action in format used by Pokémon Let's GO Pikachu/Eevee and"
+                "Pokémon Sword/Shield."),
                ("TRANM", "TRANM (.tranm)",
-                "Exports action in format used by Pokémon Legends: Arceus and "
-                "Pokémon Scarlet/Violet.")),
+                "Exports action in format used by Pokémon Legends: Arceus, "
+                "Pokémon Scarlet/Violet and Pokémon Legends: Z-A")),
         description="Output format for action",
         default=0,
         update=on_export_format_changed
@@ -668,7 +669,8 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
 
     use_action_range: BoolProperty(
         name="Use action's frame range",
-        description="If available, use action's frame range instead of scene's",
+        description="If available, use action's frame range (rounded to nearest integer) "
+                    "instead of scene's",
         default=False
     )
 
@@ -695,10 +697,10 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
             return filepath + desired_ext
         return filepath
 
-    def check(self, context: bpy.types.Context) -> bool:
+    def check(self, _context: bpy.types.Context) -> bool:
         """
         Checks if operator needs to be updated.
-        :param context: Blender's Context.
+        :param _context: Blender's Context.
         :return: True if update is needed, False otherwise.
         """
         old_filepath = self.filepath
@@ -723,10 +725,10 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
 
-    def draw(self, context: bpy.types.Context):
+    def draw(self, _context: bpy.types.Context):
         """
         Drawing exporter's menu.
-        :param context: Blender's context.
+        :param _context: Blender's context.
         """
         self.layout.prop(self, "export_format")
         self.layout.prop(self, "does_loop")
@@ -760,12 +762,11 @@ class PokemonSwitchImportMenu(bpy.types.Menu):
     bl_idname = "import_pokemonswitch"
     bl_label = "Nintendo Switch Pokémon Assets"
 
-    def draw(self, context: bpy.types.Context):
+    def draw(self, _context: bpy.types.Context):
         """
         Drawing menu.
-        :param context: Blender's context.
+        :param _context: Blender's context.
         """
-        
         self.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
         self.layout.operator(ImportGfbanm.bl_idname, text="Pokémon Animation (.gfbanm/.tranm)")
         self.layout.operator(TRCMAImport.bl_idname, text="Pokémon Camera Animation (.trcma)")
@@ -781,31 +782,31 @@ class PokemonSwitchExportMenu(bpy.types.Menu):
     bl_idname = "export_pokemonswitch"
     bl_label = "Nintendo Switch Pokémon Assets"
 
-    def draw(self, context: bpy.types.Context):
+    def draw(self, _context: bpy.types.Context):
         """
         Drawing menu.
-        :param context: Blender's context.
+        :param _context: Blender's context.
         """
         self.layout.operator(TRSKLExport.bl_idname, text="Pokémon Trinity Skeleton (.trskl)")
         self.layout.operator(ExportGfbanm.bl_idname,
                              text="Pokémon Animation (.gfbanm/.tranm)")
 
 
-def menu_func_import(operator: bpy.types.Operator, context: bpy.types.Context):
+def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
     """
     Function that adds import operators.
     :param operator: Blender's operator.
-    :param context: Blender's Context.
+    :param _context: Blender's Context.
     :return:
     """
     operator.layout.menu(PokemonSwitchImportMenu.bl_idname)
 
 
-def menu_func_export(operator: bpy.types.Operator, context: bpy.types.Context):
+def menu_func_export(operator: bpy.types.Operator, _context: bpy.types.Context):
     """
     Function that adds export operators.
     :param operator: Blender's operator.
-    :param context: Blender's Context.
+    :param _context: Blender's Context.
     :return:
     """
     operator.layout.menu(PokemonSwitchExportMenu.bl_idname)
@@ -863,36 +864,36 @@ def attempt_install_flatbuffers(operator: bpy.types.Operator, context: bpy.types
     if are_flatbuffers_installed():
         return True
     if bpy.app.version >= (4, 2, 0) and not bpy.app.online_access:
-        msg = "Can't install flatbuffers library using pip - Internet access is not allowed."
+        msg = "Can't install flatbuffers library using pip - Online Access is not allowed."
+        if not bpy.app.online_access_overriden:
+            msg += "\nYou can enable it in Edit -> Preferences -> System -> Network."
         operator.report({"INFO"}, msg)
         return False
     modules_path = bpy.utils.user_resource("SCRIPTS", path="modules", create=True)
     site.addsitedir(modules_path)
-    context.window_manager.progress_begin(0, 3)
-    ensurepip.bootstrap()
+    context.window_manager.progress_begin(0, 2)
+    ensurepip.bootstrap(upgrade=True)
     context.window_manager.progress_update(1)
-    subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
-    context.window_manager.progress_update(2)
     try:
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install", "--upgrade", "--target", modules_path,
              "flatbuffers"])
     except subprocess.SubprocessError as e:
-        context.window_manager.progress_update(3)
+        context.window_manager.progress_update(2)
         context.window_manager.progress_end()
         msg = (f"Failed to install flatbuffers library using pip. {e}\n"
-               f"To use this addon, put Python flatbuffers library folder for your platform"
+               f"To use this addon, install Python flatbuffers library for your platform"
                f"to this path: {modules_path}.")
         operator.report({"INFO"}, msg)
         return False
-    context.window_manager.progress_update(3)
+    context.window_manager.progress_update(2)
     context.window_manager.progress_end()
     if are_flatbuffers_installed():
         msg = "Successfully installed flatbuffers library."
         operator.report({"INFO"}, msg)
         return True
     msg = ("Failed to install flatbuffers library using pip."
-           f"To use this addon, put Python flatbuffers library folder for your platform"
+           f"To use this addon, install Python flatbuffers library for your platform"
            f"to this path: {modules_path}.")
     operator.report({"ERROR"}, msg)
     return False

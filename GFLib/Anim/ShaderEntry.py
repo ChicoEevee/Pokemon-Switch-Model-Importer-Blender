@@ -5,7 +5,7 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.FloatTrack import FloatTrackCreator
+from .FloatTrack import FloatTrackCreator
 
 np = import_numpy()
 

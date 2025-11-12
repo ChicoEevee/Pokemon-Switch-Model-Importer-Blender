@@ -5,7 +5,7 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.ByteTrack import ByteTrackCreator
+from .ByteTrack import ByteTrackCreator
 
 np = import_numpy()
 

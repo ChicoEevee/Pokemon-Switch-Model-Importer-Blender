@@ -5,7 +5,7 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.SkinTrack import SkinTrackT, SkinTrack
+from .SkinTrack import SkinTrackT, SkinTrack
 
 np = import_numpy()
 

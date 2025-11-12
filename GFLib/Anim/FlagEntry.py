@@ -5,11 +5,11 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.BooleanTrack import BooleanTrackCreator
-from GFLib.Anim.DynamicBooleanTrack import DynamicBooleanTrackT
-from GFLib.Anim.FixedBooleanTrack import FixedBooleanTrackT
-from GFLib.Anim.Framed16BooleanTrack import Framed16BooleanTrackT
-from GFLib.Anim.Framed8BooleanTrack import Framed8BooleanTrackT
+from .BooleanTrack import BooleanTrackCreator
+from .DynamicBooleanTrack import DynamicBooleanTrackT
+from .FixedBooleanTrack import FixedBooleanTrackT
+from .Framed16BooleanTrack import Framed16BooleanTrackT
+from .Framed8BooleanTrack import Framed8BooleanTrackT
 
 np = import_numpy()
 

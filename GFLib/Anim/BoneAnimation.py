@@ -5,8 +5,8 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.BoneInit import BoneInitT, BoneInit
-from GFLib.Anim.BoneTrack import BoneTrackT, BoneTrack
+from .BoneInit import BoneInitT, BoneInit
+from .BoneTrack import BoneTrackT, BoneTrack
 
 np = import_numpy()
 

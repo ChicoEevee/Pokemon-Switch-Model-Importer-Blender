@@ -5,7 +5,7 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.CommandEntry import CommandEntryT, CommandEntry
+from .CommandEntry import CommandEntryT, CommandEntry
 
 np = import_numpy()
 

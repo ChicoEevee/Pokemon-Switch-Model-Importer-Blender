@@ -5,7 +5,7 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.MaterialTrack import MaterialTrack, MaterialTrackT
+from .MaterialTrack import MaterialTrack, MaterialTrackT
 
 np = import_numpy()
 

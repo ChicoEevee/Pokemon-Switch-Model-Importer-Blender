@@ -2,31 +2,26 @@
     Script for exporting armature animation to gfbanm/tranm format.
 """
 import math
-import os
-import sys
-
 import bpy
 import flatbuffers
 from mathutils import Vector, Quaternion
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
+from .GFLib.Anim.Animation import AnimationT
+from .GFLib.Anim.BoneAnimation import BoneAnimationT
+from .GFLib.Anim.BoneTrack import BoneTrackT
+from .GFLib.Anim.FixedVectorTrack import FixedVectorTrackT
+from .GFLib.Anim.DynamicVectorTrack import DynamicVectorTrackT
+from .GFLib.Anim.Framed16VectorTrack import Framed16VectorTrackT
+from .GFLib.Anim.Framed8VectorTrack import Framed8VectorTrackT
+from .GFLib.Anim.FixedRotationTrack import FixedRotationTrackT
+from .GFLib.Anim.DynamicRotationTrack import DynamicRotationTrackT
+from .GFLib.Anim.Framed16RotationTrack import Framed16RotationTrackT
+from .GFLib.Anim.Framed8RotationTrack import Framed8RotationTrackT
+from .GFLib.Anim.Info import InfoT
+from .GFLib.Anim.Vec3 import Vec3T
+from .GFLib.Anim.sVec3 import sVec3T
 
-# pylint: disable=wrong-import-position, import-error, too-many-branches, consider-using-dict-items
-
-from GFLib.Anim.Animation import AnimationT
-from GFLib.Anim.BoneAnimation import BoneAnimationT
-from GFLib.Anim.BoneTrack import BoneTrackT
-from GFLib.Anim.FixedVectorTrack import FixedVectorTrackT
-from GFLib.Anim.DynamicVectorTrack import DynamicVectorTrackT
-from GFLib.Anim.Framed16VectorTrack import Framed16VectorTrackT
-from GFLib.Anim.Framed8VectorTrack import Framed8VectorTrackT
-from GFLib.Anim.FixedRotationTrack import FixedRotationTrackT
-from GFLib.Anim.DynamicRotationTrack import DynamicRotationTrackT
-from GFLib.Anim.Framed16RotationTrack import Framed16RotationTrackT
-from GFLib.Anim.Framed8RotationTrack import Framed8RotationTrackT
-from GFLib.Anim.Info import InfoT
-from GFLib.Anim.Vec3 import Vec3T
-from GFLib.Anim.sVec3 import sVec3T
+# pylint: disable=too-many-branches, consider-using-dict-items
 
 VectorTrackType = (FixedVectorTrackT | DynamicVectorTrackT | Framed16VectorTrackT |
                    Framed8VectorTrackT)
@@ -47,12 +42,12 @@ def export_animation(context: bpy.types.Context, does_loop: bool,
         "Target Armature not selected."
     current_frame = context.scene.frame_current
     if use_action_range and context.object.animation_data and context.object.animation_data.action:
-        frame_range = (int(context.object.animation_data.action.frame_range[0]),
-                       int(context.object.animation_data.action.frame_range[1]))
+        frame_range = (math.floor(context.object.animation_data.action.frame_range[0]),
+                       math.ceil(context.object.animation_data.action.frame_range[1]))
         assert frame_range[1] - frame_range[0] > -1, "Action has invalid frame range set."
     else:
         frame_range = (context.scene.frame_start, context.scene.frame_end)
-        assert frame_range[1] - frame_range[0] > -1, "Scene has incorrect frame range set."
+        assert frame_range[1] - frame_range[0] > -1, "Scene has invalid frame range set."
     animation = AnimationT()
     animation.info = InfoT()
     animation.info.keyFrames = frame_range[1] - frame_range[0] + 1
@@ -60,7 +55,7 @@ def export_animation(context: bpy.types.Context, does_loop: bool,
     animation.info.doesLoop = int(does_loop)
     animation.skeleton = BoneAnimationT()
     animation.skeleton.tracks = []
-    transforms = get_all_track_transforms(context, frame_range)
+    transforms = get_all_track_transforms(context.object, context.scene, frame_range)
     context.window_manager.progress_begin(0, len(transforms))
     for i, bone_name in enumerate(transforms):
         print(f"Exporting keyframes for {bone_name} track.")
@@ -139,24 +134,6 @@ def pack_quaternion_to_48bit(q: Quaternion) -> (int, int, int):
     return x, y, z
 
 
-def round_float(f: float) -> float:
-    """
-    Rounds float number to 6 digits after the point and fixes negative zero.
-    :param f: Float number.
-    :return: Rounded float number.
-    """
-    return round(f, 6) + 0.0
-
-
-def get_rounded_vector(v: Vector) -> Vector:
-    """
-    Creates rounded Vector from another.
-    :param v: Vector.
-    :return: Rounded Vector.
-    """
-    return Vector((round_float(v[0]), round_float(v[1]), round_float(v[2])))
-
-
 def vector_list_to_vector_track(vector_list: list[Vector]) -> VectorTrackType | None:
     """
     Converts list of Vectors to appropriate VectorTrack.
@@ -164,24 +141,27 @@ def vector_list_to_vector_track(vector_list: list[Vector]) -> VectorTrackType | 
     :return: VectorTrack.
     """
     has_value_list = [i < 1 or vector_list[i] != vector_list[i - 1] or (
-            i < len(vector_list) - 1 and vector_list[i] != vector_list[i + 1]) for i in range(len(vector_list))]
+            i < len(vector_list) - 1 and vector_list[i] != vector_list[i + 1]) for i in
+                      range(len(vector_list))]
     indexes = [i for i, has_value in enumerate(has_value_list) if has_value]
     if len(indexes) < 1:
         return None
     if len(indexes) == 1:
         track = FixedVectorTrackT()
-        track.co = vec3t_from_tuple(get_rounded_vector(vector_list[indexes[0]]).to_tuple())
+        track.co = vec3t_from_tuple(vector_list[indexes[0]].to_tuple())
         return track
-    if len(indexes) > 65535 or len(indexes) == len(vector_list):
+    max_index = max(indexes)
+    if len(indexes) == len(vector_list) or max_index > 65535:
         track = DynamicVectorTrackT()
-        track.co = [vec3t_from_tuple(get_rounded_vector(vector).to_tuple()) for vector in vector_list]
+        track.co = [vec3t_from_tuple(vector.to_tuple()) for vector in
+                    vector_list]
         return track
-    if len(indexes) < 256:
+    if max_index < 256:
         track = Framed8VectorTrackT()
     else:
         track = Framed16VectorTrackT()
     track.frames = indexes.copy()
-    track.co = [vec3t_from_tuple(get_rounded_vector(vector_list[i]).to_tuple()) for i in indexes]
+    track.co = [vec3t_from_tuple(vector_list[i].to_tuple()) for i in indexes]
     return track
 
 
@@ -204,9 +184,9 @@ def quaternion_list_to_rotation_track(quat_list: list[Quaternion]) -> RotationTr
     """
     for i in range(1, len(quat_list)):
         quat_list[i].make_compatible(quat_list[i - 1])
-    has_value_list = [
-        i < 1 or quat_list[i] != quat_list[i - 1] or (i < len(quat_list) - 1 and quat_list[i] != quat_list[i + 1]) for i
-        in range(len(quat_list))]
+    has_value_list = [i < 1 or quat_list[i] != quat_list[i - 1] or (
+            i < len(quat_list) - 1 and quat_list[i] != quat_list[i + 1]) for i in
+                      range(len(quat_list))]
     indexes = [i for i, has_value in enumerate(has_value_list) if has_value]
     if len(indexes) < 1:
         return None
@@ -214,11 +194,12 @@ def quaternion_list_to_rotation_track(quat_list: list[Quaternion]) -> RotationTr
         track = FixedRotationTrackT()
         track.co = svec3t_from_tuple(pack_quaternion_to_48bit(quat_list[indexes[0]]))
         return track
-    if len(indexes) > 65535 or len(indexes) == len(quat_list):
+    max_index = max(indexes)
+    if len(indexes) == len(quat_list) or max_index > 65535:
         track = DynamicRotationTrackT()
         track.co = [svec3t_from_tuple(pack_quaternion_to_48bit(quat)) for quat in quat_list]
         return track
-    if len(indexes) < 256:
+    if max_index < 256:
         track = Framed8RotationTrackT()
     else:
         track = Framed16RotationTrackT()
@@ -287,18 +268,22 @@ def get_posebone_transforms(pose_bone: bpy.types.PoseBone) -> (Vector, Quaternio
     return translation, rotation, scale
 
 
-def get_all_track_transforms(context: bpy.types.Context, frame_range: (int, int)) -> dict[
-    str, (list[Vector], list[Quaternion], list[Vector])]:
+def get_all_track_transforms(armature_obj: bpy.types.Object, scene: bpy.types.Scene,
+                             frame_range: (int, int)) -> dict[
+    str, tuple[list[Vector], list[Quaternion], list[Vector]]]:
     """
     Gets transforms for each PoseBone of Armature on each frame of action.
-    :param context: Blender's Context.
+    :param armature_obj: Armature object.
+    :param scene: Scene.
     :param frame_range: Frame range.
     :return: Dict containing PoseBone name and list of (Location, Rotation, Scale) transforms.
     """
     transforms = {}
+    if armature_obj is None or armature_obj.type != "ARMATURE":
+        return transforms
     for i in range(frame_range[0], frame_range[1] + 1):
-        context.scene.frame_set(i)
-        for pose_bone in context.object.pose.bones:
+        scene.frame_set(i)
+        for pose_bone in armature_obj.pose.bones:
             translation, rotation, scale = get_posebone_transforms(pose_bone)
             if pose_bone.name not in transforms:
                 transforms.update({pose_bone.name: ([translation], [rotation], [scale])})

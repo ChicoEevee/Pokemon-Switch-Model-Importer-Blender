@@ -5,7 +5,7 @@
 import flatbuffers
 from flatbuffers.compat import import_numpy
 
-from GFLib.Anim.Transform import Transform, TransformT
+from .Transform import Transform, TransformT
 
 np = import_numpy()
 
