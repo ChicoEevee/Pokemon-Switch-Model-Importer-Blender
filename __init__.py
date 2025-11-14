@@ -865,7 +865,7 @@ def attempt_install_flatbuffers(operator: bpy.types.Operator, context: bpy.types
         return True
     if bpy.app.version >= (4, 2, 0) and not bpy.app.online_access:
         msg = "Can't install flatbuffers library using pip - Online Access is not allowed."
-        if not bpy.app.online_access_overriden:
+        if not bpy.app.online_access_override:
             msg += "\nYou can enable it in Edit -> Preferences -> System -> Network."
         operator.report({"INFO"}, msg)
         return False
