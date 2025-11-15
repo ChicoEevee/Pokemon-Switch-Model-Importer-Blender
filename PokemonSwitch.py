@@ -328,7 +328,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
 
         mat_count = trmtr2.MaterialsLength()
         for x in range(mat_count):
-            mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = "";mat_loweyemsk0 = "";mat_uppeyemsk0 = ""; mat_opacity_map = ""; mat_occlusion_map0 = ""
+            mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = "";mat_loweyemsk0 = "";mat_uppeyemsk0 = ""; mat_opacity_map = ""; mat_occlusion_map0 = ""; mat_rimlight_mask = ""
             mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0.0; mat_uv_trs_v = 0.0
             mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0.0; mat_uv_trs2_v = 0.0
             mat_spec_map0 = ""; mat_probe_map0 = ""; mat_reflec_map0 = ""
@@ -437,6 +437,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 if texture_name == "LocalSpecularProbe": mat_probe_map0 = texture_file
                 if texture_name == "LocalReflectionMap": mat_reflec_map0 = texture_file
                 if texture_name == "OcclusionMap": mat_occlusion_map0 = texture_file
+                if texture_name == "RimLightMaskMap": mat_rimlight_mask = texture_file
                 print(texture_name, texture_file)
             for f in range(mat_fb.FloatParameterLength()):
                 fparam = mat_fb.FloatParameter(f)
@@ -560,6 +561,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 "mat_uvcenter0_y": mat_uvcenter0_y,
                 "mat_opacity_map": mat_opacity_map,
                 "mat_occlusion_map0": mat_occlusion_map0,
+                "mat_rimlight_mask": mat_rimlight_mask,
                 "mat_color_r": mat_color_r, "mat_color_g": mat_color_g, "mat_color_b": mat_color_b,
                 "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b,
                 "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b,
@@ -961,6 +963,15 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                             material.node_tree.links.new(combine.outputs[0], occlusion_image_texture.inputs[0])
                     material.node_tree.links.new(occlusion_image_texture.outputs[0], shadegroupnodes.inputs['OcclusionMap'])
 
+                if os.path.exists(os.path.join(filep, mat["mat_rimlight_mask"][:-5] + textureextension)) == True:
+                    rimlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    rimlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rimlight_mask"][:-5] + textureextension))
+                    rimlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                    width, height = rimlight_image_texture.image.size
+                    if width != height:
+                        if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            material.node_tree.links.new(combine.outputs[0], rimlight_image_texture.inputs[0])
+                    material.node_tree.links.new(rimlight_image_texture.outputs[0], shadegroupnodes.inputs['RimLightMaskMap'])
 
                 if mat["mat_enable_metallic_map"]:
                     roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
