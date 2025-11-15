@@ -328,7 +328,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
 
         mat_count = trmtr2.MaterialsLength()
         for x in range(mat_count):
-            mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = "";mat_loweyemsk0 = "";mat_uppeyemsk0 = ""; mat_opacity_map = ""
+            mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = "";mat_loweyemsk0 = "";mat_uppeyemsk0 = ""; mat_opacity_map = ""; mat_occlusion_map0 = ""
             mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0.0; mat_uv_trs_v = 0.0
             mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0.0; mat_uv_trs2_v = 0.0
             mat_spec_map0 = ""; mat_probe_map0 = ""; mat_reflec_map0 = ""
@@ -436,7 +436,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 if texture_name == "SpecularMaskMap": mat_spec_map0 = texture_file
                 if texture_name == "LocalSpecularProbe": mat_probe_map0 = texture_file
                 if texture_name == "LocalReflectionMap": mat_reflec_map0 = texture_file
-
+                if texture_name == "OcclusionMap": mat_occlusion_map0 = texture_file
+                print(texture_name, texture_file)
             for f in range(mat_fb.FloatParameterLength()):
                 fparam = mat_fb.FloatParameter(f)
                 name = fparam.FloatName().decode("utf-8")
@@ -558,6 +559,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 "mat_uvcenter0_x": mat_uvcenter0_x,
                 "mat_uvcenter0_y": mat_uvcenter0_y,
                 "mat_opacity_map": mat_opacity_map,
+                "mat_occlusion_map0": mat_occlusion_map0,
                 "mat_color_r": mat_color_r, "mat_color_g": mat_color_g, "mat_color_b": mat_color_b,
                 "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b,
                 "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b,
@@ -706,6 +708,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 shadegroupnodes.inputs['EmissionColorLayer4'].default_value = emcolor4
                 shadegroupnodes.inputs['Roughness'].default_value = mat["mat_rgh_value"]
                 shadegroupnodes.inputs['Metallic'].default_value = mat["mat_metallic"]
+                shadegroupnodes.inputs['metal_prb'].default_value = mat["mat_metallic"]
                 shadegroupnodes.inputs['EmissionStrength'].default_value = mat["mat_emm_intensity"]
                 shadegroupnodes.inputs['EmissionIntensityLayer1'].default_value = mat["mat_emm_intensity1"]
                 shadegroupnodes.inputs['EmissionIntensityLayer2'].default_value = mat["mat_emm_intensity2"]
@@ -948,12 +951,24 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                             material.node_tree.links.new(combine.outputs[0], specular_image_texture.inputs[0])
                     material.node_tree.links.new(specular_image_texture.outputs[0], shadegroupnodes.inputs['SpecularMaskMap'])
 
+                if os.path.exists(os.path.join(filep, mat["mat_occlusion_map0"][:-5] + textureextension)) == True:
+                    occlusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    occlusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_occlusion_map0"][:-5] + textureextension))
+                    occlusion_image_texture.image.colorspace_settings.name = "Non-Color"
+                    width, height = occlusion_image_texture.image.size
+                    if width != height:
+                        if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            material.node_tree.links.new(combine.outputs[0], occlusion_image_texture.inputs[0])
+                    material.node_tree.links.new(occlusion_image_texture.outputs[0], shadegroupnodes.inputs['OcclusionMap'])
+
+
                 if mat["mat_enable_metallic_map"]:
                     roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     if os.path.exists(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension)) == True:
                         roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
                         roughness_image_texture.image.colorspace_settings.name = "Non-Color"
                     material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Metallic'])
+                    material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['fresnel_prb'])
 
                 if "fresnel_prb" in mat["mat_probe_map0"] or "fresnel_a_prb" in mat["mat_probe_map0"] or "fresnel_b_prb" in mat["mat_probe_map0"]:
                     shadegroupnodes.inputs['fresnel_prb'].default_value = 1.0
@@ -1659,9 +1674,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                                                 
                                                 if poly_group_array[x]["tangents_fmt"] != "None":
                                                     tangent_array.append((tanx, tany, tanz))
-
-                                                
-                                                
+                                                    
                                                 uv_array.append((tu, tv))
                                                 
                                                 color_array.append((colorr, colorg, colorb))
@@ -1826,6 +1839,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                                                     MorphVert_array.append(vert_array[v])
                                                     MorphNormal_array.append(normal_array[v])
                                                 for v in range(morphbuffergroupsbytecount // 0x1C):
+                                                    #Morphs always seem to use this setup.
                                                     vx = readfloat(trmbf)
                                                     vy = readfloat(trmbf)
                                                     vz = readfloat(trmbf)
@@ -1912,7 +1926,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                                 # # vertex colours
                                 color_layer = new_object.data.vertex_colors.new(name="Color")
                                 new_object.data.vertex_colors.active = color_layer
-                                
+
                                 for i, poly in enumerate(new_object.data.polygons):
                                     for v, vert in enumerate(poly.vertices):
                                         loop_index = poly.loop_indices[v]
