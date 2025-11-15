@@ -308,10 +308,24 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 new_bone.head = (0,0,0)
                 new_bone.tail = (0, 0, 0.1)
                 new_bone.matrix = bone_matrix
-                
                 if entry["transform_node"]["parent_idx"] != 0:
-                    new_bone.parent = bone_array[entry["transform_node"]["parent_idx"] - 1]
-                    new_bone.matrix = bone_array[entry["transform_node"]["parent_idx"] - 1].matrix @ bone_matrix
+                    parent_idx = entry["transform_node"]["parent_idx"] - 1
+                    if parent_idx >= len(bone_array):
+                        # Use trsklmapped rig_idx lookup only when parent_idx is higher than bone_array
+                        parent_entry = next(
+                            (e for e in trsklmapped if e["transform_node"]["rig_idx"] == parent_idx - 2),
+                            None
+                        )
+                        if parent_entry:
+                            parent_bone_name = parent_entry["transform_node"]["name"]
+                            parent_bone = new_armature.edit_bones.get(parent_bone_name)
+                            if parent_bone:
+                                new_bone.parent = parent_bone
+                                new_bone.matrix = parent_bone.matrix @ bone_matrix
+                    else:
+                        # Default to bone_array index
+                        new_bone.parent = bone_array[parent_idx]
+                        new_bone.matrix = bone_array[parent_idx].matrix @ bone_matrix
                 if entry["transform_node"]["rig_idx"] >= 0:
                     bone_id_map[entry["transform_node"]["rig_idx"]] = entry["transform_node"]["name"]
                 
