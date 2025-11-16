@@ -734,6 +734,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 shadegroupnodes.inputs['LayerMaskScale2'].default_value = mat["mat_lym_scale2"]
                 shadegroupnodes.inputs['LayerMaskScale3'].default_value = mat["mat_lym_scale3"]
                 shadegroupnodes.inputs['LayerMaskScale4'].default_value = mat["mat_lym_scale4"]
+                if "_51_" in trmtr_path or "_52_" in trmtr_path:
+                    shadegroupnodes.inputs['MegaEffect'].default_value = mat["mat_lym_scale4"]
 
                 shcolor1 = (mat["mat_shcolor1_r"], mat["mat_shcolor1_g"], mat["mat_shcolor1_b"], 1.0)
                 shcolor2 = (mat["mat_shcolor2_r"], mat["mat_shcolor2_g"], mat["mat_shcolor2_b"], 1.0)
