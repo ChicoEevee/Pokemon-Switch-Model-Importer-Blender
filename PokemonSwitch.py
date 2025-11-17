@@ -724,7 +724,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 shadegroupnodes.inputs['EmissionColorLayer4'].default_value = emcolor4
                 shadegroupnodes.inputs['Roughness'].default_value = mat["mat_rgh_value"]
                 shadegroupnodes.inputs['Metallic'].default_value = mat["mat_metallic"]
-                shadegroupnodes.inputs['metal_prb'].default_value = mat["mat_metallic"]
                 shadegroupnodes.inputs['EmissionStrength'].default_value = mat["mat_emm_intensity"]
                 shadegroupnodes.inputs['EmissionIntensityLayer1'].default_value = mat["mat_emm_intensity1"]
                 shadegroupnodes.inputs['EmissionIntensityLayer2'].default_value = mat["mat_emm_intensity2"]
