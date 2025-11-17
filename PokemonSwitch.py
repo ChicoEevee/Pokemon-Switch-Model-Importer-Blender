@@ -879,6 +879,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                         alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                         material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
                         width, height = alb_image_texture.image.size
+                        alb_image_texture.image.alpha_mode = 'CHANNEL_PACKED'
                         if width != height:
                             if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
                                 alb_image_texture.interpolation = "Closest"
@@ -892,6 +893,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                     width, height = opacity_image_texture.image.size
                     if width != height:
                         if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            opacity_image_texture.interpolation = "Closest"
                             material.node_tree.links.new(combine.outputs[0], opacity_image_texture.inputs[0])
                 try:
                     if mat["mat_enable_highlight_map"]:
@@ -931,6 +933,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                         material.node_tree.links.new(eyelid_image_texture.outputs[1], shadegroupnodes.inputs['UpEye_alpha'])
                         material.node_tree.links.new(eyelid_image_texture.outputs[0], shadegroupnodes.inputs['UpEye_alb'])
                     if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                        eyelid_image_texture.interpolation = "Closest"
                         material.node_tree.links.new(mapping_node2.outputs[0], eyelid_image_texture.inputs[0])
 
                 if mat["mat_enable_normal_map"]:
@@ -966,6 +969,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                     width, height = specular_image_texture.image.size
                     if width != height:
                         if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            specular_image_texture.interpolation = "Closest"
                             material.node_tree.links.new(combine.outputs[0], specular_image_texture.inputs[0])
                     material.node_tree.links.new(specular_image_texture.outputs[0], shadegroupnodes.inputs['SpecularMaskMap'])
 
@@ -976,6 +980,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                     width, height = occlusion_image_texture.image.size
                     if width != height:
                         if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            occlusion_image_texture.interpolation = "Closest"
                             material.node_tree.links.new(combine.outputs[0], occlusion_image_texture.inputs[0])
                     material.node_tree.links.new(occlusion_image_texture.outputs[0], shadegroupnodes.inputs['OcclusionMap'])
 
@@ -986,6 +991,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                     width, height = rimlight_image_texture.image.size
                     if width != height:
                         if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
+                            rimlight_image_texture.interpolation = "Closest"
                             material.node_tree.links.new(combine.outputs[0], rimlight_image_texture.inputs[0])
                     material.node_tree.links.new(rimlight_image_texture.outputs[0], shadegroupnodes.inputs['RimLightMaskMap'])
 
