@@ -380,7 +380,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
             mat_sss_offset = 0.0
             mat_metallic = 0.0
             mat_spec_intensity = 1.0
-            mat_lym_scale1 = 1.0; mat_lym_scale2 = 1.0; mat_lym_scale3 = 1.0; mat_lym_scale4 = 1.0
+            mat_lym_scale1 = 0.0; mat_lym_scale2 = 0.0; mat_lym_scale3 = 0.0; mat_lym_scale4 = 0.0
             mat_basecolor_index1 = -1; mat_basecolor_index2 = -1; mat_basecolor_index3 = -1; mat_basecolor_index4 = -1; mat_basecolor_index5 = -1; mat_basecolor_index6 = -1; mat_basecolor_index7 = -1; mat_basecolor_index8 = -1; mat_basecolor_index9 = -1; mat_basecolor_index10 = -1; mat_basecolor_index11 = -1; mat_basecolor_index12 = -1; mat_basecolor_index13 = -1; mat_basecolor_index14 = -1; mat_basecolor_index15 = -1; mat_basecolor_index16 = -1; mat_basecolor_index17 = -1; mat_basecolor_index18 = -1; mat_basecolor_index19 = -1; mat_basecolor_index20 = -1; mat_basecolor_index21 = -1; mat_basecolor_index22 = -1; mat_basecolor_index23 = -1; mat_basecolor_index24 = -1; mat_basecolor_index25 = -1; mat_basecolor_index26 = -1; mat_basecolor_index27 = -1; mat_basecolor_index28 = -1; mat_basecolor_index29 = -1; mat_basecolor_index30 = -1; mat_basecolor_index31 = -1; mat_basecolor_index32 = -1; mat_basecolor_index33 = -1; mat_basecolor_index34 = -1; mat_basecolor_index35 = -1; mat_basecolor_index36 = -1; mat_basecolor_index37 = -1; mat_basecolor_index38 = -1; mat_basecolor_index39 = -1; mat_basecolor_index40 = -1; mat_colortabledividenumber = -1; mat_colortable_tex = ""; mat_enablecolortablemap = False
             mat_alpha_setting = ""
             mat_enablealpha = False
