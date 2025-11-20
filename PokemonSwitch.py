@@ -300,7 +300,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 if entry["bone"] != None:
                     if entry["bone"]["inherit_scale"] == True:
                         
-                        if blender_version[0] == 4:
+                        if blender_version[0] >= 4:
                             new_bone.inherit_scale = 'NONE'
                         else:
                             new_bone.use_inherit_scale = False
@@ -699,8 +699,13 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                     if basecolor == (1.0, 1.0, 1.0, 1.0) and "sh_white_msk" in mat["mat_col0"]:
                         shadegroupnodes.inputs['BaseColor'].default_value = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 except:
-                    print("")
-
+                    print("aaa")
+                
+                ShaderNodeSeparateRGB = "ShaderNodeSeparateRGB"
+                if blender_version[0] >= 5:
+                    ShaderNodeSeparateRGB = "ShaderNodeSeparateColor"
+                print(ShaderNodeSeparateRGB)
+                
                 color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
                 color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
@@ -940,7 +945,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                     if os.path.exists(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension)) == True:
                         normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension))
                         normal_image_texture.image.colorspace_settings.name = "Non-Color"
-                    separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+                    separate_color2 = material.node_tree.nodes.new(ShaderNodeSeparateRGB)
                     combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
                     material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
                     material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
