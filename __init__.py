@@ -476,6 +476,16 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         description="Enables fake metal reflection.",
         default=False
     )
+    enable_rim: BoolProperty(
+        name="Enable Rim Light",
+        description="Rim Light.",
+        default=True
+    )
+    enable_mega_effect: BoolProperty(
+        name="Enable Mega Effect",
+        description="Mega Effect.",
+        default=False
+    )
 
 
     def draw(self, context: bpy.types.Context):
@@ -489,6 +499,8 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         self.layout.prop(self, "loadlods")
         self.layout.prop(self, "rotate90")
         self.layout.prop(self, "enable_metal_prb")
+        self.layout.prop(self, "enable_rim")
+        self.layout.prop(self, "enable_mega_effect")
 
     def execute(self, context: bpy.types.Context):
         """
@@ -507,15 +519,15 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
                         trmdl_files.append((root, item))
             trmdl_files.sort(key=lambda x: os.path.join(x[0], x[1]))
             for root, item in trmdl_files:
-                from_trmdlsv(root, item, self.rare, self.loadlods, self.rotate90, self.enable_metal_prb)
+                from_trmdlsv(root, item, self.rare, self.loadlods, self.rotate90, self.enable_metal_prb, self.enable_rim, self.enable_mega_effect)
         elif self.multiple:
             file_list = sorted(os.listdir(directory))
             obj_list = [item for item in file_list if item.endswith(".trmdl")]
             for item in obj_list:
-                from_trmdlsv(directory, item, self.rare, self.loadlods, self.rotate90, self.enable_metal_prb)
+                from_trmdlsv(directory, item, self.rare, self.loadlods, self.rotate90, self.enable_metal_prb, self.enable_rim, self.enable_mega_effect)
         else:
             filename = os.path.basename(self.filepath)
-            from_trmdlsv(directory, filename, self.rare, self.loadlods, self.rotate90, self.enable_metal_prb)
+            from_trmdlsv(directory, filename, self.rare, self.loadlods, self.rotate90, self.enable_metal_prb, self.enable_rim, self.enable_mega_effect)
 
         return {"FINISHED"}
 
@@ -543,7 +555,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
     anim_offset: IntProperty(
         name="Animation Offset",
         description="Offset to apply to animation during import, in frames",
-        default=1
+        default=0
     )
     set_scene_end: BoolProperty(
         name="Set end Scene range",

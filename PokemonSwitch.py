@@ -63,7 +63,7 @@ def find_player_base_path(filep, chara_check):
     return None
 
 
-def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
+def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, enable_rim, enable_mega_effect):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdlname[:-6]))
@@ -738,7 +738,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                 shadegroupnodes.inputs['LayerMaskScale2'].default_value = mat["mat_lym_scale2"]
                 shadegroupnodes.inputs['LayerMaskScale3'].default_value = mat["mat_lym_scale3"]
                 shadegroupnodes.inputs['LayerMaskScale4'].default_value = mat["mat_lym_scale4"]
-                if "_51_" in trmtr_path or "_52_" in trmtr_path:
+                if enable_mega_effect == True:
                     if "eye" not in mat["mat_name"]:
                         shadegroupnodes.inputs['MegaEffect'].default_value = 1.0
 
@@ -989,7 +989,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb):
                             material.node_tree.links.new(combine.outputs[0], occlusion_image_texture.inputs[0])
                     material.node_tree.links.new(occlusion_image_texture.outputs[0], shadegroupnodes.inputs['OcclusionMap'])
 
-                if os.path.exists(os.path.join(filep, mat["mat_rimlight_mask"][:-5] + textureextension)) == True:
+                if os.path.exists(os.path.join(filep, mat["mat_rimlight_mask"][:-5] + textureextension)) == True and enable_rim == True:
                     rimlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     rimlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rimlight_mask"][:-5] + textureextension))
                     rimlight_image_texture.image.colorspace_settings.name = "Non-Color"
