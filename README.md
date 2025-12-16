@@ -13,7 +13,7 @@ Pokémon Scarlet Violet Raw Files with PNGs
 
 Pokémon Legends ZA Raw Files with PNGs (Not working for now)
 
-[All Pokémon from ZA](https://drive.google.com/file/d/1odj8GF0zvGB-a6dPvvTkHw1i2dvKph1e/view?usp=sharing)
+[All Pokémon from ZA](https://drive.google.com/file/d/1puMNcKox4SIMBDaV5KlpMYCjXcD_39-P/view?usp=sharing)
 
 
 Special thanks to [SomeKitten](https://github.com/SomeKitten) for all the help and initial start.
