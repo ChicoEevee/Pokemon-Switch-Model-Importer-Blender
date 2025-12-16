@@ -380,6 +380,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
             mat_sss_offset = 0.0
             mat_metallic = 0.0
             mat_spec_intensity = 1.0
+            mat_required_uv = ""
             mat_lym_scale1 = 0.0; mat_lym_scale2 = 0.0; mat_lym_scale3 = 0.0; mat_lym_scale4 = 0.0
             mat_basecolor_index1 = -1; mat_basecolor_index2 = -1; mat_basecolor_index3 = -1; mat_basecolor_index4 = -1; mat_basecolor_index5 = -1; mat_basecolor_index6 = -1; mat_basecolor_index7 = -1; mat_basecolor_index8 = -1; mat_basecolor_index9 = -1; mat_basecolor_index10 = -1; mat_basecolor_index11 = -1; mat_basecolor_index12 = -1; mat_basecolor_index13 = -1; mat_basecolor_index14 = -1; mat_basecolor_index15 = -1; mat_basecolor_index16 = -1; mat_basecolor_index17 = -1; mat_basecolor_index18 = -1; mat_basecolor_index19 = -1; mat_basecolor_index20 = -1; mat_basecolor_index21 = -1; mat_basecolor_index22 = -1; mat_basecolor_index23 = -1; mat_basecolor_index24 = -1; mat_basecolor_index25 = -1; mat_basecolor_index26 = -1; mat_basecolor_index27 = -1; mat_basecolor_index28 = -1; mat_basecolor_index29 = -1; mat_basecolor_index30 = -1; mat_basecolor_index31 = -1; mat_basecolor_index32 = -1; mat_basecolor_index33 = -1; mat_basecolor_index34 = -1; mat_basecolor_index35 = -1; mat_basecolor_index36 = -1; mat_basecolor_index37 = -1; mat_basecolor_index38 = -1; mat_basecolor_index39 = -1; mat_basecolor_index40 = -1; mat_colortabledividenumber = -1; mat_colortable_tex = ""; mat_enablecolortablemap = False
             mat_alpha_setting = ""
@@ -423,6 +424,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if name == "EyelidType": mat_eyelid_type = value
                     if name == "EnableColorTableMap": mat_enablecolortablemap = value
                     if name == "EnableAlphaTest": mat_enablealpha = value
+                    if name == "NumRequiredUV": mat_required_uv = value
                 if shader_name: mat_shader = shader_name
                 shaders.append({"shader_name": shader_name, "shader_values": shader_values})
 
@@ -457,6 +459,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 fparam = mat_fb.FloatParameter(f)
                 name = fparam.FloatName().decode("utf-8")
                 value = fparam.FloatValue()
+                print(name,value)
                 if name == "Roughness": mat_rgh_value = value
                 elif name == "Reflectance": mat_reflectance = value
                 elif name == "EmissionIntensity": mat_emm_intensity = value
@@ -576,6 +579,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 "mat_opacity_map": mat_opacity_map,
                 "mat_occlusion_map0": mat_occlusion_map0,
                 "mat_rimlight_mask": mat_rimlight_mask,
+                "mat_required_uv": mat_required_uv,
                 "mat_color_r": mat_color_r, "mat_color_g": mat_color_g, "mat_color_b": mat_color_b,
                 "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b,
                 "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b,
@@ -705,7 +709,18 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 if blender_version[0] >= 5:
                     ShaderNodeSeparateRGB = "ShaderNodeSeparateColor"
                 print(ShaderNodeSeparateRGB)
-                
+                lym_image_texture = None
+                alb_image_texture = None
+                opacity_image_texture = None
+                highlight_image_texture = None
+                eyelid_image_texture = None
+                normal_image_texture = None
+                emission_image_texture = None
+                roughness_image_texture = None
+                specular_image_texture = None
+                occlusion_image_texture = None
+                rimlight_image_texture = None
+ 
                 color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
                 color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
@@ -1012,6 +1027,13 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     shadegroupnodes.inputs['fresnel_prb'].default_value = 1.0
                 if enable_metal_prb == True:
                     shadegroupnodes.inputs['metal_prb'].default_value = 1.0
+                image_nodes = [ lym_image_texture, alb_image_texture, opacity_image_texture, highlight_image_texture, eyelid_image_texture, normal_image_texture, emission_image_texture, roughness_image_texture, specular_image_texture, occlusion_image_texture, rimlight_image_texture ]
+                if mat["mat_required_uv"] == "2":
+                    uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
+                    uv_node.uv_map = "UV2Map"
+                    for node in image_nodes:
+                        if node and "Vector" in node.inputs:
+                            material.node_tree.links.new(uv_node.outputs["UV"], node.inputs["Vector"])
 
 
     if loadlods == False:
