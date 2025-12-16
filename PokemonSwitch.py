@@ -1048,7 +1048,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if mat["mat_uvinsideparallaxint"] == 1:
                         parallax_uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
                         parallax_uv_node.uv_map = "UV2Map"
-                        material.node_tree.links.new(uv_node.outputs["UV"], parallax1_image_texture.inputs["Vector"])
+                        material.node_tree.links.new(parallax_uv_node.outputs["UV"], parallax1_image_texture.inputs["Vector"])
                         
                 if mat["mat_required_uv"] == "2":
                     uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
