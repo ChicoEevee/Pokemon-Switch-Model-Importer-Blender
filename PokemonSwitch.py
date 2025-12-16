@@ -681,7 +681,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 "mat_metallic": mat_metallic,
                 "mat_probe_map0": mat_probe_map0,
                 "mat_reflec_map0": mat_reflec_map0,
-                "mat_spec_intensity": mat_spec_intensity
+                "mat_spec_intensity": mat_spec_intensity,
+                "mat_parallax1_map": mat_parallax1_map,
+                "mat_parallax2_map": mat_parallax2_map,
+                "mat_uvinsideparallaxint": mat_uvinsideparallaxint,
+                "mat_uvinsideparallaxhe": mat_uvinsideparallaxhe
             })
         mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
         
@@ -1037,9 +1041,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 image_nodes = [ lym_image_texture, alb_image_texture, opacity_image_texture, highlight_image_texture, eyelid_image_texture, normal_image_texture, emission_image_texture, roughness_image_texture, specular_image_texture, occlusion_image_texture, rimlight_image_texture ]
                 
                 if "bntx" in mat["mat_parallax1_map"]:
-                    if os.path.exists(os.path.join(filep, mat["parallax1_image_texture"][:-5] + textureextension)) == True:
+                    if os.path.exists(os.path.join(filep, mat["mat_parallax1_map"][:-5] + textureextension)) == True:
                         parallax1_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        parallax1_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["parallax1_image_texture"][:-5] + textureextension))
+                        parallax1_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_parallax1_map"][:-5] + textureextension))
                     material.node_tree.links.new(parallax1_image_texture.outputs[0], shadegroupnodes.inputs['ParallaxInside'])
                     if mat["mat_uvinsideparallaxint"] == 1:
                         parallax_uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
