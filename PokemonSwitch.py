@@ -1041,21 +1041,24 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 image_nodes = [ lym_image_texture, alb_image_texture, opacity_image_texture, highlight_image_texture, eyelid_image_texture, normal_image_texture, emission_image_texture, roughness_image_texture, specular_image_texture, occlusion_image_texture, rimlight_image_texture ]
                 
                 if "bntx" in mat["mat_parallax1_map"]:
-                    if os.path.exists(os.path.join(filep, mat["mat_parallax1_map"][:-5] + textureextension)) == True:
-                        parallax1_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        parallax1_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_parallax1_map"][:-5] + textureextension))
-                    material.node_tree.links.new(parallax1_image_texture.outputs[0], shadegroupnodes.inputs['ParallaxInside'])
-                    if mat["mat_uvinsideparallaxint"] == 1:
-                        parallax_uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
-                        parallax_uv_node.uv_map = "UV2Map"
-                        material.node_tree.links.new(parallax_uv_node.outputs["UV"], parallax1_image_texture.inputs["Vector"])
-                        
-                if mat["mat_required_uv"] == "2":
-                    uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
-                    uv_node.uv_map = "UV2Map"
-                    for node in image_nodes:
-                        if node and "Vector" in node.inputs:
-                            material.node_tree.links.new(uv_node.outputs["UV"], node.inputs["Vector"])
+                    try:
+                        if os.path.exists(os.path.join(filep, mat["mat_parallax1_map"][:-5] + textureextension)) == True:
+                            parallax1_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                            parallax1_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_parallax1_map"][:-5] + textureextension))
+                        material.node_tree.links.new(parallax1_image_texture.outputs[0], shadegroupnodes.inputs['ParallaxInside'])
+                        if mat["mat_uvinsideparallaxint"] == 1:
+                            parallax_uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
+                            parallax_uv_node.uv_map = "UV2Map"
+                            material.node_tree.links.new(parallax_uv_node.outputs["UV"], parallax1_image_texture.inputs["Vector"])
+                    except:
+                        print("Error Loading Parallax")
+                else:
+                    if mat["mat_required_uv"] == "2":
+                        uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
+                        uv_node.uv_map = "UV2Map"
+                        for node in image_nodes:
+                            if node and "Vector" in node.inputs:
+                                material.node_tree.links.new(uv_node.outputs["UV"], node.inputs["Vector"])
 
 
     if loadlods == False:
