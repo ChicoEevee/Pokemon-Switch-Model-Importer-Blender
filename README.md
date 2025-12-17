@@ -15,5 +15,7 @@ Pokémon Legends ZA Raw Files with PNGs (Not working for now)
 
 [All Pokémon from ZA](https://drive.google.com/file/d/1puMNcKox4SIMBDaV5KlpMYCjXcD_39-P/view?usp=sharing)
 
+[NPCs from ZA](https://drive.google.com/file/d/19r-po4bIUkrjAmX0Cok6FFgAS-WcbIzF/view?usp=sharing)
+
 
 Special thanks to [SomeKitten](https://github.com/SomeKitten) for all the help and initial start.
