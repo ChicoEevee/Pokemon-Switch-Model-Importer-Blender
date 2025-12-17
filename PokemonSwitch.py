@@ -394,6 +394,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
             mat_enable_displacement_map = False
             mat_enable_highlight_map = False
             mat_base_color_multiply = True
+            mat_layermaskuv = "False"
             mat_num_material_layer = 0
             mat_eyelid_type = ""
             mat_fb = trmtr2.Materials(x)
@@ -428,6 +429,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if name == "EnableColorTableMap": mat_enablecolortablemap = value
                     if name == "EnableAlphaTest": mat_enablealpha = value
                     if name == "NumRequiredUV": mat_required_uv = value
+                    if name == "EnableLayerMaskUVTransform": mat_layermaskuv = value
                 if shader_name: mat_shader = shader_name
                 shaders.append({"shader_name": shader_name, "shader_values": shader_values})
 
@@ -685,7 +687,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 "mat_parallax1_map": mat_parallax1_map,
                 "mat_parallax2_map": mat_parallax2_map,
                 "mat_uvinsideparallaxint": mat_uvinsideparallaxint,
-                "mat_uvinsideparallaxhe": mat_uvinsideparallaxhe
+                "mat_uvinsideparallaxhe": mat_uvinsideparallaxhe,
+                "mat_layermaskuv": mat_layermaskuv
             })
         mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
         
@@ -1056,9 +1059,16 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if mat["mat_required_uv"] == "2":
                         uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
                         uv_node.uv_map = "UV2Map"
-                        for node in image_nodes:
-                            if node and "Vector" in node.inputs:
-                                material.node_tree.links.new(uv_node.outputs["UV"], node.inputs["Vector"])
+                        if mat["mat_layermaskuv"] == "True":
+                            try:
+                                material.node_tree.links.new(uv_node.outputs["UV"], opacity_image_texture.inputs["Vector"])
+                            except:
+                                material.node_tree.links.new(uv_node.outputs["UV"], highlight_image_texture.inputs["Vector"])
+                        else:
+                            material.node_tree.links.new(uv_node.outputs["UV"], normal_image_texture.inputs["Vector"])
+                            ##for node in image_nodes:
+                            ##    if node and "Vector" in node.inputs:
+                            ##        material.node_tree.links.new(uv_node.outputs["UV"], node.inputs["Vector"])
 
 
     if loadlods == False:
