@@ -1065,10 +1065,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                             except:
                                 material.node_tree.links.new(uv_node.outputs["UV"], highlight_image_texture.inputs["Vector"])
                         else:
-                            material.node_tree.links.new(uv_node.outputs["UV"], normal_image_texture.inputs["Vector"])
-                            ##for node in image_nodes:
-                            ##    if node and "Vector" in node.inputs:
-                            ##        material.node_tree.links.new(uv_node.outputs["UV"], node.inputs["Vector"])
+                            ##material.node_tree.links.new(uv_node.outputs["UV"], normal_image_texture.inputs["Vector"])
+                            for node in image_nodes:
+                                if node and "Vector" in node.inputs:
+                                    material.node_tree.links.new(uv_node.outputs["UV"], node.inputs["Vector"])
+
 
 
     if loadlods == False:
