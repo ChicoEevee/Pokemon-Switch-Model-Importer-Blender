@@ -949,8 +949,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                                 full_path = os.path.join(filep, path)
                                 if os.path.exists(full_path):
                                     highlight_image_texture.image = bpy.data.images.load(full_path)
+                                    material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
                                     break
-                        material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
                 except:
                     print("Issue loading hightlight map")
                 #EyelidType Upper is Disabled for now~
@@ -959,13 +959,13 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if mat["mat_eyelid_type"] == "Lower":
                         if os.path.exists(os.path.join(filep, mat["mat_loweyemsk0"][:-5] + textureextension)) == True:
                             eyelid_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_loweyemsk0"][:-5] + textureextension))
-                        material.node_tree.links.new(eyelid_image_texture.outputs[1], shadegroupnodes.inputs['LowEye_alpha'])
-                        material.node_tree.links.new(eyelid_image_texture.outputs[0], shadegroupnodes.inputs['LowEye_alb'])
+                            material.node_tree.links.new(eyelid_image_texture.outputs[1], shadegroupnodes.inputs['LowEye_alpha'])
+                            material.node_tree.links.new(eyelid_image_texture.outputs[0], shadegroupnodes.inputs['LowEye_alb'])
                     elif mat["mat_eyelid_type"] == "Upper":
                         if os.path.exists(os.path.join(filep, mat["mat_uppeyemsk0"][:-5] + textureextension)) == True:
                             eyelid_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_uppeyemsk0"][:-5] + textureextension))
-                        material.node_tree.links.new(eyelid_image_texture.outputs[1], shadegroupnodes.inputs['UpEye_alpha'])
-                        material.node_tree.links.new(eyelid_image_texture.outputs[0], shadegroupnodes.inputs['UpEye_alb'])
+                            material.node_tree.links.new(eyelid_image_texture.outputs[1], shadegroupnodes.inputs['UpEye_alpha'])
+                            material.node_tree.links.new(eyelid_image_texture.outputs[0], shadegroupnodes.inputs['UpEye_alb'])
                     if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
                         eyelid_image_texture.interpolation = "Closest"
                         material.node_tree.links.new(mapping_node2.outputs[0], eyelid_image_texture.inputs[0])
@@ -975,13 +975,13 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if os.path.exists(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension)) == True:
                         normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension))
                         normal_image_texture.image.colorspace_settings.name = "Non-Color"
-                    separate_color2 = material.node_tree.nodes.new(ShaderNodeSeparateRGB)
-                    combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
-                    material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
-                    material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
-                    material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
-                    material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
-                    material.node_tree.links.new(combine_color2.outputs[0], shadegroupnodes.inputs['NormalMap'])
+                        separate_color2 = material.node_tree.nodes.new(ShaderNodeSeparateRGB)
+                        combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
+                        material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
+                        material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
+                        material.node_tree.links.new(combine_color2.outputs[0], shadegroupnodes.inputs['NormalMap'])
 
                 if mat["mat_enable_emission_color_map"]:
                     emission_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1034,8 +1034,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if os.path.exists(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension)) == True:
                         roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
                         roughness_image_texture.image.colorspace_settings.name = "Non-Color"
-                    material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Metallic'])
-                    material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['fresnel_prb'])
+                        material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Metallic'])
+                        material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['fresnel_prb'])
 
                 if "fresnel_prb" in mat["mat_probe_map0"] or "fresnel_a_prb" in mat["mat_probe_map0"] or "fresnel_b_prb" in mat["mat_probe_map0"]:
                     shadegroupnodes.inputs['fresnel_prb'].default_value = 1.0
@@ -1349,7 +1349,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                                             vert_buff_param_ptr_fmt = readshort(trmsh)
                                             vert_buff_param_ptr_position = readshort(trmsh)
                                         else:
-                                            print(vert_buff_param_struct_len, "errorerrorerror")
                                             raise AssertionError("Unknown vertex buffer parameter struct length!")
 
                                         vert_buff_param_layer = 0
