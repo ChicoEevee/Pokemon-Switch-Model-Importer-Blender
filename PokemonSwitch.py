@@ -933,9 +933,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if mat["mat_enable_highlight_map"]:
                         highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         base_path = os.path.join(filep, mat["mat_lym0"][:-5])
-                        try:
+                        if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + textureextension)):
                             highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + textureextension))
-                        except:
+                            material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
+                        else:
                             if "r_eye" in material.name:
                                 primary = base_path.replace("eye_lym", "r_eye_msk") + ".png"
                             elif "l_eye" in material.name:
