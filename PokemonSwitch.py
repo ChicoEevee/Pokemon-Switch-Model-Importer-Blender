@@ -402,6 +402,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
             mat_uvinsideparallaxhe = 0
             mat_parallax1_map = ""
             mat_parallax2_map = ""
+            mat_uvindexlayer1 = 0
             mat_name = mat_fb.Name().decode("utf-8") if mat_fb.Name() else ""
 
             shaders = []
@@ -527,6 +528,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 elif name == "BaseColorIndex40": mat_basecolor_index40 = value
                 elif name == "UVIndexInsideEmissionParallaxIntensity": mat_uvinsideparallaxint = value
                 elif name == "UVIndexInsideEmissionParallaxHeight": mat_uvinsideparallaxinthe = value
+                elif name == "UVIndexLayer1": mat_uvindexlayer1 = value
 
             for f in range(mat_fb.Float4ParameterLength()):
                 fparam = mat_fb.Float4Parameter(f)
@@ -688,7 +690,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 "mat_parallax2_map": mat_parallax2_map,
                 "mat_uvinsideparallaxint": mat_uvinsideparallaxint,
                 "mat_uvinsideparallaxhe": mat_uvinsideparallaxhe,
-                "mat_layermaskuv": mat_layermaskuv
+                "mat_layermaskuv": mat_layermaskuv,
+                "textures": textures,
+                "mat_uvindexlayer1": mat_uvindexlayer1
             })
         mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
         
@@ -718,7 +722,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                         shadegroupnodes.inputs['BaseColor'].default_value = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 except:
                     print("aaa")
-                
                 ShaderNodeSeparateRGB = "ShaderNodeSeparateRGB"
                 if blender_version[0] >= 5:
                     ShaderNodeSeparateRGB = "ShaderNodeSeparateColor"
@@ -1056,21 +1059,26 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                             material.node_tree.links.new(parallax_uv_node.outputs["UV"], parallax1_image_texture.inputs["Vector"])
                     except:
                         print("Error Loading Parallax")
-                else:
-                    if mat["mat_required_uv"] == "2":
-                        uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
-                        uv_node.uv_map = "UV2Map"
-                        if mat["mat_layermaskuv"] == "True":
-                            try:
-                                material.node_tree.links.new(uv_node.outputs["UV"], opacity_image_texture.inputs["Vector"])
-                            except:
-                                material.node_tree.links.new(uv_node.outputs["UV"], highlight_image_texture.inputs["Vector"])
-                        else:
-                            ##material.node_tree.links.new(uv_node.outputs["UV"], normal_image_texture.inputs["Vector"])
-                            for node in image_nodes:
-                                if node and "Vector" in node.inputs:
-                                    material.node_tree.links.new(uv_node.outputs["UV"], node.inputs["Vector"])
-
+                if mat["mat_required_uv"] == "2":
+                    uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
+                    uv_node.uv_map = "UV2Map"
+                    if mat["mat_layermaskuv"] == "True":
+                        try:
+                            material.node_tree.links.new(uv_node.outputs["UV"], opacity_image_texture.inputs["Vector"])
+                        except:
+                            material.node_tree.links.new(uv_node.outputs["UV"], highlight_image_texture.inputs["Vector"])
+                    else:
+                        texture_name_uv2 = mat["textures"][mat["mat_uvindexlayer1"]]["texture_name"]
+                        if texture_name_uv2 == "NormalMap":
+                            material.node_tree.links.new(uv_node.outputs["UV"], normal_image_texture.inputs["Vector"])
+                        elif texture_name_uv2 == "BaseColorMap":
+                            material.node_tree.links.new(uv_node.outputs["UV"], alb_image_texture.inputs["Vector"])
+                        elif texture_name_uv2 == "AOMap":
+                            material.node_tree.links.new(uv_node.outputs["UV"], occlusion_image_texture.inputs["Vector"])
+                        elif texture_name_uv2 == "RoughnessMap":
+                            material.node_tree.links.new(uv_node.outputs["UV"], roughness_image_texture.inputs["Vector"])
+                        elif texture_name_uv2 == "RoughnessMap":
+                            material.node_tree.links.new(uv_node.outputs["UV"], roughness_image_texture.inputs["Vector"])
 
 
     if loadlods == False:
@@ -1367,7 +1375,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                                             vert_buff_param_position = readlong(trmsh)
                                         else:
                                             vert_buff_param_position = 0
-                                            print("vert_buff_param_position = 0")
 
                                         # -- Types:
                                         # -- 0x01: = Positions
@@ -1429,7 +1436,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                                         elif vert_buff_param_type == 0x04:
                                             if vert_buff_param_layer != 0:
                                                 raise AssertionError("Unexpected normals layer!")
-                                            print(vert_buff_param_format)
                                             if vert_buff_param_format == 0x2B:
                                                 binormals_fmt = "4HalfFloats"
                                                 vert_buffer_stride = vert_buffer_stride + 0x08
@@ -1556,10 +1562,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                                     vert_buffer_sub_offset = ftell(trmbf) + readlong(trmbf)
                                     vert_buffer_sub_ret = ftell(trmbf)
                                     fseek(trmbf, vert_buffer_sub_offset)
-                                    if y == 0:
-                                        print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
-                                    else:
-                                        print(f"Vertex buffer {x} morph {y} header: {hex(ftell(trmbf))}")
+                                    #if y == 0:
+                                    #    print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
+                                    #else:
+                                    #    print(f"Vertex buffer {x} morph {y} header: {hex(ftell(trmbf))}")
                                     vert_buffer_sub_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_sub_struct)
                                     vert_buffer_sub_struct_len = readshort(trmbf)
                                     if vert_buffer_sub_struct_len != 0x0006:
