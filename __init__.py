@@ -686,6 +686,13 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         default=False
     )
 
+    high_precision: BoolProperty(
+        name="Use high precision tracks",
+        description="Always use dynamic tracks instead of fixed and framed for higher precision. "
+                    "The resulting file will be much bigger in size.",
+        default=False
+    )
+
     @staticmethod
     def ensure_filepath_matches_export_format(filepath: str, export_format: str) -> str:
         """
@@ -716,8 +723,8 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         :return: True if update is needed, False otherwise.
         """
         old_filepath = self.filepath
-        self.filepath = ExportGfbanm.ensure_filepath_matches_export_format(self.filepath,
-                                                                           self.export_format)
+        self.filepath = self.ensure_filepath_matches_export_format(self.filepath,
+                                                                   self.export_format)
         return self.filepath != old_filepath
 
     def invoke(self, context: bpy.types.Context, _event: bpy.types.Event) -> set[str]:
@@ -732,8 +739,12 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         obj = context.object
         if obj and obj.animation_data and obj.animation_data.action:
             filename = obj.animation_data.action.name
-        self.filepath = ExportGfbanm.ensure_filepath_matches_export_format(
+        self.filepath = self.ensure_filepath_matches_export_format(
             os.path.join(directory, filename), self.export_format)
+        if self.export_format == "TRANM":
+            self.filter_glob = "*.tranm"
+        else:
+            self.filter_glob = "*.gfbanm"
         context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
 
@@ -745,6 +756,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
         self.layout.prop(self, "export_format")
         self.layout.prop(self, "does_loop")
         self.layout.prop(self, "use_action_range")
+        self.layout.prop(self, "high_precision")
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         """
@@ -759,7 +771,7 @@ class ExportGfbanm(bpy.types.Operator, ExportHelper):
             return {"CANCELLED"}
         directory = os.path.dirname(self.filepath)
         from .gfbanm_exporter import export_animation
-        data = export_animation(context, self.does_loop, self.use_action_range)
+        data = export_animation(context, self.does_loop, self.use_action_range, self.high_precision)
         file_path = os.path.join(directory, self.filepath)
         with open(file_path, "wb") as file:
             file.write(data)

@@ -29,13 +29,14 @@ RotationTrackType = (FixedRotationTrackT | DynamicRotationTrackT | Framed16Rotat
                      Framed8RotationTrackT)
 
 
-def export_animation(context: bpy.types.Context, does_loop: bool,
-                     use_action_range: bool) -> int | bytearray:
+def export_animation(context: bpy.types.Context, does_loop: bool, use_action_range: bool,
+                     high_precision: bool) -> int | bytearray:
     """
     Exports armature animation to GFBANM/TRANM format.
     :param context: Blender's Context.
     :param does_loop: True if animation is looping.
     :param use_action_range: True if using action's frame range instead of scene's.
+    :param high_precision: Force dynamic tracks for higher precision.
     :return: GFBANM/TRANM bytearray.
     """
     assert context.object is not None and context.object.type == "ARMATURE", \
@@ -61,11 +62,11 @@ def export_animation(context: bpy.types.Context, does_loop: bool,
         print(f"Exporting keyframes for {bone_name} track.")
         track = BoneTrackT()
         track.name = bone_name
-        track.translate = vector_list_to_vector_track(transforms[bone_name][0])
+        track.translate = vector_list_to_vector_track(transforms[bone_name][0], high_precision)
         track.translateType = vector_track_to_type(track.translate)
-        track.rotate = quaternion_list_to_rotation_track(transforms[bone_name][1])
+        track.rotate = quaternion_list_to_rotation_track(transforms[bone_name][1], high_precision)
         track.rotateType = rotation_track_to_type(track.rotate)
-        track.scale = vector_list_to_vector_track(transforms[bone_name][2])
+        track.scale = vector_list_to_vector_track(transforms[bone_name][2], high_precision)
         track.scaleType = vector_track_to_type(track.scale)
         animation.skeleton.tracks.append(track)
         context.window_manager.progress_update(i + 1)
@@ -134,12 +135,19 @@ def pack_quaternion_to_48bit(q: Quaternion) -> (int, int, int):
     return x, y, z
 
 
-def vector_list_to_vector_track(vector_list: list[Vector]) -> VectorTrackType | None:
+def vector_list_to_vector_track(vector_list: list[Vector],
+                                high_precision: bool) -> VectorTrackType | None:
     """
     Converts list of Vectors to appropriate VectorTrack.
     :param vector_list: List of Vectors
+    :param high_precision: Force dynamic track for higher precision.
     :return: VectorTrack.
     """
+    if high_precision:
+        track = DynamicVectorTrackT()
+        track.co = [vec3t_from_tuple(vector.to_tuple()) for vector in
+                    vector_list]
+        return track
     has_value_list = [i < 1 or vector_list[i] != vector_list[i - 1] or (
             i < len(vector_list) - 1 and vector_list[i] != vector_list[i + 1]) for i in
                       range(len(vector_list))]
@@ -176,14 +184,20 @@ def vec3t_from_tuple(t: (float, float, float)) -> Vec3T:
     return vec
 
 
-def quaternion_list_to_rotation_track(quat_list: list[Quaternion]) -> RotationTrackType | None:
+def quaternion_list_to_rotation_track(quat_list: list[Quaternion],
+                                      high_precision: bool) -> RotationTrackType | None:
     """
     Converts list of Quaternions to appropriate RotationTrack.
     :param quat_list: List of Quaternions
+    :param high_precision: Force dynamic track for higher precision.
     :return: RotationTrack.
     """
     for i in range(1, len(quat_list)):
         quat_list[i].make_compatible(quat_list[i - 1])
+    if high_precision:
+        track = DynamicRotationTrackT()
+        track.co = [svec3t_from_tuple(pack_quaternion_to_48bit(quat)) for quat in quat_list]
+        return track
     has_value_list = [i < 1 or quat_list[i] != quat_list[i - 1] or (
             i < len(quat_list) - 1 and quat_list[i] != quat_list[i + 1]) for i in
                       range(len(quat_list))]
