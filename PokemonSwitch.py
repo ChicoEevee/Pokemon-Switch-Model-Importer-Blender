@@ -1078,15 +1078,17 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if mat["mat_uvindexlayer1"] != -1:
                         texture_name_uv2 = mat["textures"][mat["mat_uvindexlayer1"]]["texture_name"]
                         print(texture_name_uv2)
-                        if texture_name_uv2 == "NormalMap":
-                            material.node_tree.links.new(uv_node.outputs["UV"], normal_image_texture.inputs["Vector"])
-                        elif texture_name_uv2 == "BaseColorMap":
-                            material.node_tree.links.new(uv_node.outputs["UV"], alb_image_texture.inputs["Vector"])
-                        elif texture_name_uv2 == "AOMap":
-                            material.node_tree.links.new(uv_node.outputs["UV"], occlusion_image_texture.inputs["Vector"])
-                        elif texture_name_uv2 == "RoughnessMap":
-                            material.node_tree.links.new(uv_node.outputs["UV"], roughness_image_texture.inputs["Vector"])
-
+                        try:
+                            if texture_name_uv2 == "NormalMap":
+                                material.node_tree.links.new(uv_node.outputs["UV"], normal_image_texture.inputs["Vector"])
+                            elif texture_name_uv2 == "BaseColorMap":
+                                material.node_tree.links.new(uv_node.outputs["UV"], alb_image_texture.inputs["Vector"])
+                            elif texture_name_uv2 == "AOMap":
+                                material.node_tree.links.new(uv_node.outputs["UV"], occlusion_image_texture.inputs["Vector"])
+                            elif texture_name_uv2 == "RoughnessMap":
+                                material.node_tree.links.new(uv_node.outputs["UV"], roughness_image_texture.inputs["Vector"])
+                        except:
+                            print("Issue with UV2 Mapping")
 
     if loadlods == False:
         trmsh_count = 1
