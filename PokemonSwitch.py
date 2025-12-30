@@ -402,7 +402,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
             mat_uvinsideparallaxhe = 0
             mat_parallax1_map = ""
             mat_parallax2_map = ""
-            mat_uvindexlayer1 = 0
+            mat_uvindexlayer1 = -1
+            mat_uvindexlayer5 = -1
+            mat_uvindexlayermask = -1
             mat_name = mat_fb.Name().decode("utf-8") if mat_fb.Name() else ""
 
             shaders = []
@@ -529,6 +531,8 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 elif name == "UVIndexInsideEmissionParallaxIntensity": mat_uvinsideparallaxint = value
                 elif name == "UVIndexInsideEmissionParallaxHeight": mat_uvinsideparallaxinthe = value
                 elif name == "UVIndexLayer1": mat_uvindexlayer1 = value
+                elif name == "UVIndexLayer5": mat_uvindexlayer5 = value
+                elif name == "UVIndexLayerMask": mat_uvindexlayermask = value
 
             for f in range(mat_fb.Float4ParameterLength()):
                 fparam = mat_fb.Float4Parameter(f)
@@ -692,7 +696,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 "mat_uvinsideparallaxhe": mat_uvinsideparallaxhe,
                 "mat_layermaskuv": mat_layermaskuv,
                 "textures": textures,
-                "mat_uvindexlayer1": mat_uvindexlayer1
+                "mat_uvindexlayer1": mat_uvindexlayer1,
+                "mat_uvindexlayer5": mat_uvindexlayer5,
+                "mat_uvindexlayermask": mat_uvindexlayermask
             })
         mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
         
@@ -1062,25 +1068,24 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 if mat["mat_required_uv"] == "2":
                     uv_node = material.node_tree.nodes.new("ShaderNodeUVMap")
                     uv_node.uv_map = "UV2Map"
-                    if mat["mat_layermaskuv"] == "True":
+                    if mat["mat_uvindexlayer5"] != -1:
                         try:
                             material.node_tree.links.new(uv_node.outputs["UV"], opacity_image_texture.inputs["Vector"])
                         except:
                             material.node_tree.links.new(uv_node.outputs["UV"], highlight_image_texture.inputs["Vector"])
-                    else:
-                        if mat["mat_uvindexlayer1"] != -1:
-                            texture_name_uv2 = mat["textures"][mat["mat_uvindexlayer1"]]["texture_name"]
-                            print(texture_name_uv2)
-                            if texture_name_uv2 == "NormalMap":
-                                material.node_tree.links.new(uv_node.outputs["UV"], normal_image_texture.inputs["Vector"])
-                            elif texture_name_uv2 == "BaseColorMap":
-                                material.node_tree.links.new(uv_node.outputs["UV"], alb_image_texture.inputs["Vector"])
-                            elif texture_name_uv2 == "AOMap":
-                                material.node_tree.links.new(uv_node.outputs["UV"], occlusion_image_texture.inputs["Vector"])
-                            elif texture_name_uv2 == "RoughnessMap":
-                                material.node_tree.links.new(uv_node.outputs["UV"], roughness_image_texture.inputs["Vector"])
-                            elif texture_name_uv2 == "RoughnessMap":
-                                material.node_tree.links.new(uv_node.outputs["UV"], roughness_image_texture.inputs["Vector"])
+                    if mat["mat_uvindexlayermask"] != -1:
+                        material.node_tree.links.new(uv_node.outputs["UV"], lym_image_texture.inputs["Vector"])
+                    if mat["mat_uvindexlayer1"] != -1:
+                        texture_name_uv2 = mat["textures"][mat["mat_uvindexlayer1"]]["texture_name"]
+                        print(texture_name_uv2)
+                        if texture_name_uv2 == "NormalMap":
+                            material.node_tree.links.new(uv_node.outputs["UV"], normal_image_texture.inputs["Vector"])
+                        elif texture_name_uv2 == "BaseColorMap":
+                            material.node_tree.links.new(uv_node.outputs["UV"], alb_image_texture.inputs["Vector"])
+                        elif texture_name_uv2 == "AOMap":
+                            material.node_tree.links.new(uv_node.outputs["UV"], occlusion_image_texture.inputs["Vector"])
+                        elif texture_name_uv2 == "RoughnessMap":
+                            material.node_tree.links.new(uv_node.outputs["UV"], roughness_image_texture.inputs["Vector"])
 
 
     if loadlods == False:
