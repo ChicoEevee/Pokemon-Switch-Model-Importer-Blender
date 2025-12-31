@@ -286,7 +286,7 @@ def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict) -> di
     ## TODO: make it possible later for different presets
     ## for trainers, pokemon, buildings
     # uvs = []
-    uv = mesh.uv_layers.active.data
+    uv_layer = mesh.uv_layers.active.data
     # if settings["uv"] == 1:
     # uv = mesh.uv_layers.active.data
     vert_data = []
