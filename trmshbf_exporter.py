@@ -289,41 +289,48 @@ def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict) -> di
     uv = mesh.uv_layers.active.data
     # if settings["uv"] == 1:
     # uv = mesh.uv_layers.active.data
+    vert_data = []
+    poly_data = []
+
     for poly in mesh.polygons:
-        pol = []
+        poly_indices = []
+
         for loop_index in poly.loop_indices:
-            vert_d = []
             loop = mesh.loops[loop_index]
-            v_idx = loop.vertex_index
-            pol.append(loop.vertex_index)
-            vert = mesh.vertices[v_idx]
-            pos = (vert.co[0], vert.co[1], vert.co[2])
-            vert_d.append(pos)
-            if settings["normal"] == 1:
-                nor = (loop.normal[0], loop.normal[1], loop.normal[2])
-                vert_d.append(nor)
-            if settings["tangent"] == 1:
-                tan = (loop.tangent[0], loop.tangent[1], loop.tangent[2])
-                vert_d.append(tan)
-            if settings["uv"] == 1:
-                tex = (uv[loop_index].uv[0], uv[loop_index].uv[1])
-                vert_d.append(tex)
-            if settings["skinning"] == 1:
-                grp = []
+            vert = mesh.vertices[loop.vertex_index]
+            export_index = len(vert_data)
+            poly_indices.append(export_index)
+            vert_d = []
+            co = vert.co
+            vert_d.append((co.x, co.y, co.z))
+            # Normal (loop)
+            if settings.get("normal") == 1:
+                n = loop.normal
+                vert_d.append((n.x, n.y, n.z))
+            # Tangent (loop)
+            if settings.get("tangent") == 1:
+                t = loop.tangent
+                vert_d.append((t.x, t.y, t.z))
+            # UV (loop)
+            if settings.get("uv") == 1:
+                uv = uv_layer[loop_index].uv
+                vert_d.append((uv.x, uv.y))
+            # Skinning (vertex)
+            if settings.get("skinning") == 1:
+                groups = []
                 for gp in vert.groups:
                     group_name = obj.vertex_groups[gp.group].name
                     if group_name in bone_dict:
-                        bone_id = bone_dict[group_name]
-                        print("Bone ID:", bone_id)
-                        grp.append((bone_id, gp.weight))
-                    else:
-                        print("Bone not found.")
-                while len(grp) < 4:
-                    grp.append((0, 0.0))
-                grp = grp[0:4]
-                vert_d.append(grp)
-            vert_data[v_idx] = vert_d
-        poly_data.append(pol)
+                        groups.append((bone_dict[group_name], gp.weight))
+
+                while len(groups) < 4:
+                    groups.append((0, 0.0))
+
+                vert_d.append(groups[:4])
+
+            vert_data.append(vert_d)
+
+        poly_data.append(poly_indices)
     ## Write poly bytes
     ## TODO: make it possible later for different polytypes
     poly_bytes = b""
