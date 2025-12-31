@@ -291,8 +291,9 @@ def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict) -> di
     # uv = mesh.uv_layers.active.data
     vert_data = []
     poly_data = []
+    polygons = sorted(mesh.polygons, key=lambda p: p.material_index)
 
-    for poly in mesh.polygons:
+    for poly in polygons:
         poly_indices = []
 
         for loop_index in poly.loop_indices:
