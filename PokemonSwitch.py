@@ -1035,18 +1035,18 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     material.node_tree.links.new(rimlight_image_texture.outputs[0], shadegroupnodes.inputs['RimLightMaskMap'])
 
                 if mat["mat_enable_metallic_map"]:
-                    roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    metallic_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     if os.path.exists(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension)) == True:
-                        roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
-                        roughness_image_texture.image.colorspace_settings.name = "Non-Color"
-                        material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Metallic'])
-                        material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['fresnel_prb'])
+                        metallic_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
+                        metallic_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(metallic_image_texture.outputs[0], shadegroupnodes.inputs['Metallic'])
+                        material.node_tree.links.new(metallic_image_texture.outputs[0], shadegroupnodes.inputs['fresnel_prb'])
 
                 if "fresnel_prb" in mat["mat_probe_map0"] or "fresnel_a_prb" in mat["mat_probe_map0"] or "fresnel_b_prb" in mat["mat_probe_map0"]:
                     shadegroupnodes.inputs['fresnel_prb'].default_value = 1.0
                 if enable_metal_prb == True:
                     shadegroupnodes.inputs['metal_prb'].default_value = 1.0
-                image_nodes = [ lym_image_texture, alb_image_texture, opacity_image_texture, highlight_image_texture, eyelid_image_texture, normal_image_texture, emission_image_texture, roughness_image_texture, specular_image_texture, occlusion_image_texture, rimlight_image_texture ]
+                image_nodes = [ lym_image_texture, alb_image_texture, opacity_image_texture, highlight_image_texture, eyelid_image_texture, normal_image_texture, emission_image_texture, roughness_image_texture, specular_image_texture, occlusion_image_texture, rimlight_image_texture, metallic_image_texture ]
                 
                 if "bntx" in mat["mat_parallax1_map"]:
                     try:
