@@ -1046,7 +1046,6 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     shadegroupnodes.inputs['fresnel_prb'].default_value = 1.0
                 if enable_metal_prb == True:
                     shadegroupnodes.inputs['metal_prb'].default_value = 1.0
-                image_nodes = [ lym_image_texture, alb_image_texture, opacity_image_texture, highlight_image_texture, eyelid_image_texture, normal_image_texture, emission_image_texture, roughness_image_texture, specular_image_texture, occlusion_image_texture, rimlight_image_texture ]
                 
                 if "bntx" in mat["mat_parallax1_map"]:
                     try:
