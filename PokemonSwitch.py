@@ -722,16 +722,11 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 materials.append(material)
                 shadegroupnodes = material.node_tree.nodes['Group']
                 basecolor = (mat["mat_color_r"], mat["mat_color_g"], mat["mat_color_b"], 1.0)
-                try:
-                    shadegroupnodes.inputs['BaseColor'].default_value = (mat["mat_color_r"], mat["mat_color_g"], mat["mat_color_b"], 1.0)
-                    if basecolor == (1.0, 1.0, 1.0, 1.0) and "sh_white_msk" in mat["mat_col0"]:
-                        shadegroupnodes.inputs['BaseColor'].default_value = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
-                except:
-                    print("aaa")
+                
                 ShaderNodeSeparateRGB = "ShaderNodeSeparateRGB"
                 if blender_version[0] >= 5:
                     ShaderNodeSeparateRGB = "ShaderNodeSeparateColor"
-                print(ShaderNodeSeparateRGB)
+                
                 lym_image_texture = None
                 alb_image_texture = None
                 opacity_image_texture = None
