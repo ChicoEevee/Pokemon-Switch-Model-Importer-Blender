@@ -269,28 +269,19 @@ def get_trmsh_data(obj: bpy.types.Object, settings: dict) -> dict:
 
 
 def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict) -> dict:
-    """
-    Returns data for TRMBF file from Mesh object.
-    :param obj: Mesh object.
-    :param settings: Dict of export settings.
-    :param bone_dict: Dict of armature info from TRSKL file.
-    :returns: Dict of TRSKL file data.
-    """
-    assert obj.type == "MESH", "Selected object is not mesh."
+    assert obj.type == "MESH"
+
     mesh = obj.data
+    if hasattr(mesh, "calc_normals_split"):
+        mesh.calc_normals_split()
     mesh.calc_tangents()
-    vert_data = [None] * len(mesh.vertices)
-    poly_data = []
-    # material_data = []
-    ## Accumulate all the relevant data
-    ## TODO: make it possible later for different presets
-    ## for trainers, pokemon, buildings
-    # uvs = []
+
     uv_layer = mesh.uv_layers.active.data
-    # if settings["uv"] == 1:
-    # uv = mesh.uv_layers.active.data
+
     vert_data = []
     poly_data = []
+    vert_map = {}
+
     polygons = sorted(mesh.polygons, key=lambda p: p.material_index)
 
     for poly in polygons:
@@ -299,75 +290,104 @@ def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict) -> di
         for loop_index in poly.loop_indices:
             loop = mesh.loops[loop_index]
             vert = mesh.vertices[loop.vertex_index]
-            export_index = len(vert_data)
-            poly_indices.append(export_index)
-            vert_d = []
-            co = vert.co
-            vert_d.append((co.x, co.y, co.z))
-            # Normal (loop)
+
+            key = [loop.vertex_index]
+
             if settings.get("normal") == 1:
-                n = loop.normal
-                vert_d.append((n.x, n.y, n.z))
-            # Tangent (loop)
+                key.append(tuple(loop.normal))
+
             if settings.get("tangent") == 1:
-                t = loop.tangent
-                vert_d.append((t.x, t.y, t.z))
-            # UV (loop)
+                key.append((
+                    loop.tangent.x,
+                    loop.tangent.y,
+                    loop.tangent.z,
+                    loop.bitangent_sign
+                ))
+
             if settings.get("uv") == 1:
                 uv = uv_layer[loop_index].uv
-                vert_d.append((uv.x, uv.y))
-            # Skinning (vertex)
+                key.append((uv.x, uv.y))
+
             if settings.get("skinning") == 1:
                 groups = []
                 for gp in vert.groups:
-                    group_name = obj.vertex_groups[gp.group].name
-                    if group_name in bone_dict:
-                        groups.append((bone_dict[group_name], gp.weight))
-
+                    name = obj.vertex_groups[gp.group].name
+                    if name in bone_dict:
+                        groups.append((bone_dict[name], gp.weight))
                 while len(groups) < 4:
                     groups.append((0, 0.0))
+                key.append(tuple(groups[:4]))
 
-                vert_d.append(groups[:4])
+            key = tuple(key)
 
-            vert_data.append(vert_d)
+            if key in vert_map:
+                export_index = vert_map[key]
+            else:
+                export_index = len(vert_data)
+                vert_map[key] = export_index
+
+                vert_d = []
+                co = vert.co
+                vert_d.append((co.x, co.y, co.z))
+
+                if settings.get("normal") == 1:
+                    n = loop.normal
+                    vert_d.append((n.x, n.y, n.z))
+
+                if settings.get("tangent") == 1:
+                    t = loop.tangent
+                    vert_d.append((t.x, t.y, t.z, loop.bitangent_sign))
+
+                if settings.get("uv") == 1:
+                    vert_d.append((uv.x, uv.y))
+
+                if settings.get("skinning") == 1:
+                    vert_d.append(groups[:4])
+
+                vert_data.append(vert_d)
+
+            poly_indices.append(export_index)
 
         poly_data.append(poly_indices)
-    ## Write poly bytes
-    ## TODO: make it possible later for different polytypes
+
     poly_bytes = b""
     for poly in poly_data:
         poly_bytes += polyFormat.pack(poly[0], poly[1], poly[2])
-    ## Write vert bytes
-    ## TODO: make it possible later for using different presets
-    ## Such as extra UVs for Buildings, extra vertex colors, etc.
+
     vert_bytes = b""
     for vert in vert_data:
         cursor = 0
+
         co = vert[cursor]
         vert_bytes += vertFormat.pack(co[0], co[1], co[2])
         cursor += 1
+
         if settings["normal"] == 1:
-            norm = vert[cursor]
-            vert_bytes += normFormat.pack(norm[0], norm[1], norm[2], 0.0)
+            n = vert[cursor]
+            vert_bytes += normFormat.pack(n[0], n[1], n[2], 0.0)
             cursor += 1
+
         if settings["tangent"] == 1:
-            tan = vert[cursor]
-            vert_bytes += normFormat.pack(tan[0], tan[1], tan[2], 0.0)
+            t = vert[cursor]
+            vert_bytes += normFormat.pack(t[0], t[1], t[2], t[3])
             cursor += 1
+
         if settings["uv"] == 1:
-            tex = vert[cursor]
-            vert_bytes += uvFormat.pack(tex[0], tex[1])
+            uv = vert[cursor]
+            vert_bytes += uvFormat.pack(uv[0], uv[1])
             cursor += 1
+
         if settings["skinning"] == 1:
-            groups = [x[0] for x in vert[cursor]]
-            vert_bytes += mtFormat.pack(groups[0], groups[1], groups[2], groups[3])
-            weights = [int(x[1] * 0xFFFF) for x in vert[cursor]]
+            groups = vert[cursor]
+            vert_bytes += mtFormat.pack(groups[0][0], groups[1][0], groups[2][0], groups[3][0])
+            weights = [int(g[1] * 0xFFFF) for g in groups]
             vert_bytes += wtFormat.pack(weights[0], weights[1], weights[2], weights[3])
-    data = {
+
+    return {
         "index_buffer": [{"buffer": list(poly_bytes)}],
         "vertex_buffer": [{"buffer": list(vert_bytes)}],
     }
-    return data
+
 
 
 def read_byte(file: FileIO):
