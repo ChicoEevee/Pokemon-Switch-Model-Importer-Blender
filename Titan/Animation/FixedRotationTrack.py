@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .sVec3 import sVec3
+
 np = import_numpy()
 
 class FixedRotationTrack(object):
@@ -29,7 +32,6 @@ class FixedRotationTrack(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Animation.sVec3 import sVec3
             obj = sVec3()
             obj.Init(self._tab.Bytes, x)
             return obj

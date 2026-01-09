@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .BoneMatrix import BoneMatrix, BoneMatrixT
+
 np = import_numpy()
 
 class Bone(object):
@@ -43,7 +46,6 @@ class Bone(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from Titan.Model.BoneMatrix import BoneMatrix
             obj = BoneMatrix()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -79,7 +81,6 @@ def BoneEnd(builder):
 def End(builder):
     return BoneEnd(builder)
 
-import Titan.Model.BoneMatrix
 try:
     from typing import Optional
 except:
@@ -91,7 +92,7 @@ class BoneT(object):
     def __init__(self):
         self.inheritScale = False  # type: bool
         self.influenceSkinning = False  # type: bool
-        self.matrix = None  # type: Optional[Titan.Model.BoneMatrix.BoneMatrixT]
+        self.matrix = None  # type: Optional[BoneMatrixT]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -117,7 +118,7 @@ class BoneT(object):
         self.inheritScale = bone.InheritScale()
         self.influenceSkinning = bone.InfluenceSkinning()
         if bone.Matrix() is not None:
-            self.matrix = Titan.Model.BoneMatrix.BoneMatrixT.InitFromObj(bone.Matrix())
+            self.matrix = BoneMatrixT.InitFromObj(bone.Matrix())
 
     # BoneT
     def Pack(self, builder):

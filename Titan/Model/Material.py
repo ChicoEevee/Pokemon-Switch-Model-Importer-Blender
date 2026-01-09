@@ -4,6 +4,16 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Shader import Shader
+from .Texture import Texture
+from .SamplerState import SamplerState
+from .FloatParameter import FloatParameter
+from .Float4Parameter import Float4Parameter
+from .IntParameter import IntParameter
+from .Byte_Extra import Byte_Extra
+from .Int_Extra import Int_Extra
+
 np = import_numpy()
 
 class Material(object):
@@ -38,7 +48,6 @@ class Material(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Shader import Shader
             obj = Shader()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -63,7 +72,6 @@ class Material(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Texture import Texture
             obj = Texture()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -88,7 +96,6 @@ class Material(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.SamplerState import SamplerState
             obj = SamplerState()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -113,7 +120,6 @@ class Material(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.FloatParameter import FloatParameter
             obj = FloatParameter()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -145,7 +151,6 @@ class Material(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Float4Parameter import Float4Parameter
             obj = Float4Parameter()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -170,7 +175,6 @@ class Material(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Float4Parameter import Float4Parameter
             obj = Float4Parameter()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -202,7 +206,6 @@ class Material(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.IntParameter import IntParameter
             obj = IntParameter()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -246,7 +249,6 @@ class Material(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(30))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from Titan.Model.Byte_Extra import Byte_Extra
             obj = Byte_Extra()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -257,7 +259,6 @@ class Material(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(32))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from Titan.Model.Int_Extra import Int_Extra
             obj = Int_Extra()
             obj.Init(self._tab.Bytes, x)
             return obj

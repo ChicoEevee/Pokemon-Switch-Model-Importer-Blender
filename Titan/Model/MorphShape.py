@@ -4,6 +4,10 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .MorphData import MorphData, MorphDataT
+from .MorphMetaData import MorphMetaData, MorphMetaDataT
+
 np = import_numpy()
 
 class MorphShape(object):
@@ -31,7 +35,6 @@ class MorphShape(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.MorphData import MorphData
             obj = MorphData()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -56,7 +59,6 @@ class MorphShape(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.MorphMetaData import MorphMetaData
             obj = MorphMetaData()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -123,8 +125,6 @@ def MorphShapeEnd(builder):
 def End(builder):
     return MorphShapeEnd(builder)
 
-import Titan.Model.MorphData
-import Titan.Model.MorphMetaData
 try:
     from typing import List
 except:
@@ -134,8 +134,8 @@ class MorphShapeT(object):
 
     # MorphShapeT
     def __init__(self):
-        self.data = None  # type: List[Titan.Model.MorphData.MorphDataT]
-        self.metadata = None  # type: List[Titan.Model.MorphMetaData.MorphMetaDataT]
+        self.data = None  # type: List[MorphDataT]
+        self.metadata = None  # type: List[MorphMetaDataT]
         self.morphName = None  # type: str
 
     @classmethod
@@ -165,7 +165,7 @@ class MorphShapeT(object):
                 if morphShape.Data(i) is None:
                     self.data.append(None)
                 else:
-                    morphData_ = Titan.Model.MorphData.MorphDataT.InitFromObj(morphShape.Data(i))
+                    morphData_ = MorphDataT.InitFromObj(morphShape.Data(i))
                     self.data.append(morphData_)
         if not morphShape.MetadataIsNone():
             self.metadata = []
@@ -173,7 +173,7 @@ class MorphShapeT(object):
                 if morphShape.Metadata(i) is None:
                     self.metadata.append(None)
                 else:
-                    morphMetaData_ = Titan.Model.MorphMetaData.MorphMetaDataT.InitFromObj(morphShape.Metadata(i))
+                    morphMetaData_ = MorphMetaDataT.InitFromObj(morphShape.Metadata(i))
                     self.metadata.append(morphMetaData_)
         self.morphName = morphShape.MorphName()
 

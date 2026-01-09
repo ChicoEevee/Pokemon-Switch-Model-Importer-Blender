@@ -4,6 +4,10 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .MorphAccessor import MorphAccessor, MorphAccessorT
+from .MorphSize import MorphSize, MorphSizeT
+
 np = import_numpy()
 
 class MorphData(object):
@@ -31,7 +35,6 @@ class MorphData(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.MorphAccessor import MorphAccessor
             obj = MorphAccessor()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -56,7 +59,6 @@ class MorphData(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.MorphSize import MorphSize
             obj = MorphSize()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -110,8 +112,6 @@ def MorphDataEnd(builder):
 def End(builder):
     return MorphDataEnd(builder)
 
-import Titan.Model.MorphAccessor
-import Titan.Model.MorphSize
 try:
     from typing import List
 except:
@@ -121,8 +121,8 @@ class MorphDataT(object):
 
     # MorphDataT
     def __init__(self):
-        self.attrs = None  # type: List[Titan.Model.MorphAccessor.MorphAccessorT]
-        self.size = None  # type: List[Titan.Model.MorphSize.MorphSizeT]
+        self.attrs = None  # type: List[MorphAccessorT]
+        self.size = None  # type: List[MorphSizeT]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -151,7 +151,7 @@ class MorphDataT(object):
                 if morphData.Attrs(i) is None:
                     self.attrs.append(None)
                 else:
-                    morphAccessor_ = Titan.Model.MorphAccessor.MorphAccessorT.InitFromObj(morphData.Attrs(i))
+                    morphAccessor_ = MorphAccessorT.InitFromObj(morphData.Attrs(i))
                     self.attrs.append(morphAccessor_)
         if not morphData.SizeIsNone():
             self.size = []
@@ -159,7 +159,7 @@ class MorphDataT(object):
                 if morphData.Size(i) is None:
                     self.size.append(None)
                 else:
-                    morphSize_ = Titan.Model.MorphSize.MorphSizeT.InitFromObj(morphData.Size(i))
+                    morphSize_ = MorphSizeT.InitFromObj(morphData.Size(i))
                     self.size.append(morphSize_)
 
     # MorphDataT

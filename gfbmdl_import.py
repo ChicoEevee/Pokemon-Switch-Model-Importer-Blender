@@ -14,40 +14,16 @@
 
 import bpy
 import mathutils
-from mathutils import Matrix, Euler, Vector
+from mathutils import Matrix
 from math import radians
 
-import os
 import os.path
 import sys
-import math
-import operator
-import numpy
 import struct
-import bmesh
 from enum import IntEnum
-sys.path.append(os.path.join(os.path.dirname(__file__), '.'))
 
-import flatbuffers
-import Gfbmdl.Bone
-import Gfbmdl.BoneRigidData
-import Gfbmdl.BoundingBox
-import Gfbmdl.Model
-import Gfbmdl.Material
-import Gfbmdl.Mesh
-import Gfbmdl.MeshAttribute
-import Gfbmdl.MeshPolygon
-import Gfbmdl.Group
-import Gfbmdl.MaterialCommon
-import Gfbmdl.MatFloat
-import Gfbmdl.MatInt
-import Gfbmdl.MatSwitch
-import Gfbmdl.MatColor
-import Gfbmdl.ColorRGB32
-import Gfbmdl.TextureMap
-import Gfbmdl.TextureMapping
-import Gfbmdl.CollisionGroup
-import Gfbmdl.Vector3
+from .GFLib.Model.Model import Model
+
 blender_version = bpy.app.version
 class BufferFormat(IntEnum):
     Float = 0
@@ -375,7 +351,7 @@ def CreateMesh(name, mon, ind, mats, bone_id_map, armature_obj):
     new_object.data.update()
             
 def LoadModel(buf, filename):
-    mon = Gfbmdl.Model.Model.GetRootAsModel(buf, 0)
+    mon = Model.GetRootAsModel(buf, 0)
     
     # Create armature
     a, armature_obj = BuildArmature(mon, filename)

@@ -4,6 +4,15 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .BoundingBox import BoundingBox, BoundingBoxT
+from .Influence import Influence, InfluenceT
+from .MaterialInfo import MaterialInfo, MaterialInfoT
+from .MorphShape import MorphShape, MorphShapeT
+from .Sphere import Sphere, SphereT
+from .VertexAccessors import VertexAccessors, VertexAccessorsT
+from .VisShape import VisShape, VisShapeT
+
 np = import_numpy()
 
 class MeshShape(object):
@@ -36,7 +45,6 @@ class MeshShape(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from Titan.Model.BoundingBox import BoundingBox
             obj = BoundingBox()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -56,7 +64,6 @@ class MeshShape(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.VertexAccessors import VertexAccessors
             obj = VertexAccessors()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -81,7 +88,6 @@ class MeshShape(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.MaterialInfo import MaterialInfo
             obj = MaterialInfo()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -132,7 +138,6 @@ class MeshShape(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(22))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Sphere import Sphere
             obj = Sphere()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -145,7 +150,6 @@ class MeshShape(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Influence import Influence
             obj = Influence()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -170,7 +174,6 @@ class MeshShape(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.VisShape import VisShape
             obj = VisShape()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -209,7 +212,6 @@ class MeshShape(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.MorphShape import MorphShape
             obj = MorphShape()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -359,13 +361,6 @@ def MeshShapeEnd(builder):
 def End(builder):
     return MeshShapeEnd(builder)
 
-import Titan.Model.BoundingBox
-import Titan.Model.Influence
-import Titan.Model.MaterialInfo
-import Titan.Model.MorphShape
-import Titan.Model.Sphere
-import Titan.Model.VertexAccessors
-import Titan.Model.VisShape
 try:
     from typing import List, Optional
 except:
@@ -376,20 +371,20 @@ class MeshShapeT(object):
     # MeshShapeT
     def __init__(self):
         self.meshShapeName = None  # type: str
-        self.bounds = None  # type: Optional[Titan.Model.BoundingBox.BoundingBoxT]
+        self.bounds = None  # type: Optional[BoundingBoxT]
         self.polygonType = 0  # type: int
-        self.attributes = None  # type: List[Titan.Model.VertexAccessors.VertexAccessorsT]
-        self.materials = None  # type: List[Titan.Model.MaterialInfo.MaterialInfoT]
+        self.attributes = None  # type: List[VertexAccessorsT]
+        self.materials = None  # type: List[MaterialInfoT]
         self.res0 = 0  # type: int
         self.res1 = 0  # type: int
         self.res2 = 0  # type: int
         self.res3 = 0  # type: int
-        self.clipSphere = None  # type: Optional[Titan.Model.Sphere.SphereT]
-        self.influence = None  # type: List[Titan.Model.Influence.InfluenceT]
-        self.visShapes = None  # type: List[Titan.Model.VisShape.VisShapeT]
+        self.clipSphere = None  # type: Optional[SphereT]
+        self.influence = None  # type: List[InfluenceT]
+        self.visShapes = None  # type: List[VisShapeT]
         self.meshName = None  # type: str
         self.unk13 = 0  # type: int
-        self.morphShape = None  # type: List[Titan.Model.MorphShape.MorphShapeT]
+        self.morphShape = None  # type: List[MorphShapeT]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -414,7 +409,7 @@ class MeshShapeT(object):
             return
         self.meshShapeName = meshShape.MeshShapeName()
         if meshShape.Bounds() is not None:
-            self.bounds = Titan.Model.BoundingBox.BoundingBoxT.InitFromObj(meshShape.Bounds())
+            self.bounds = BoundingBoxT.InitFromObj(meshShape.Bounds())
         self.polygonType = meshShape.PolygonType()
         if not meshShape.AttributesIsNone():
             self.attributes = []
@@ -422,7 +417,7 @@ class MeshShapeT(object):
                 if meshShape.Attributes(i) is None:
                     self.attributes.append(None)
                 else:
-                    vertexAccessors_ = Titan.Model.VertexAccessors.VertexAccessorsT.InitFromObj(meshShape.Attributes(i))
+                    vertexAccessors_ = VertexAccessorsT.InitFromObj(meshShape.Attributes(i))
                     self.attributes.append(vertexAccessors_)
         if not meshShape.MaterialsIsNone():
             self.materials = []
@@ -430,21 +425,21 @@ class MeshShapeT(object):
                 if meshShape.Materials(i) is None:
                     self.materials.append(None)
                 else:
-                    materialInfo_ = Titan.Model.MaterialInfo.MaterialInfoT.InitFromObj(meshShape.Materials(i))
+                    materialInfo_ = MaterialInfoT.InitFromObj(meshShape.Materials(i))
                     self.materials.append(materialInfo_)
         self.res0 = meshShape.Res0()
         self.res1 = meshShape.Res1()
         self.res2 = meshShape.Res2()
         self.res3 = meshShape.Res3()
         if meshShape.ClipSphere() is not None:
-            self.clipSphere = Titan.Model.Sphere.SphereT.InitFromObj(meshShape.ClipSphere())
+            self.clipSphere = SphereT.InitFromObj(meshShape.ClipSphere())
         if not meshShape.InfluenceIsNone():
             self.influence = []
             for i in range(meshShape.InfluenceLength()):
                 if meshShape.Influence(i) is None:
                     self.influence.append(None)
                 else:
-                    influence_ = Titan.Model.Influence.InfluenceT.InitFromObj(meshShape.Influence(i))
+                    influence_ = InfluenceT.InitFromObj(meshShape.Influence(i))
                     self.influence.append(influence_)
         if not meshShape.VisShapesIsNone():
             self.visShapes = []
@@ -452,7 +447,7 @@ class MeshShapeT(object):
                 if meshShape.VisShapes(i) is None:
                     self.visShapes.append(None)
                 else:
-                    visShape_ = Titan.Model.VisShape.VisShapeT.InitFromObj(meshShape.VisShapes(i))
+                    visShape_ = VisShapeT.InitFromObj(meshShape.VisShapes(i))
                     self.visShapes.append(visShape_)
         self.meshName = meshShape.MeshName()
         self.unk13 = meshShape.Unk13()
@@ -462,7 +457,7 @@ class MeshShapeT(object):
                 if meshShape.MorphShape(i) is None:
                     self.morphShape.append(None)
                 else:
-                    morphShape_ = Titan.Model.MorphShape.MorphShapeT.InitFromObj(meshShape.MorphShape(i))
+                    morphShape_ = MorphShapeT.InitFromObj(meshShape.MorphShape(i))
                     self.morphShape.append(morphShape_)
 
     # MeshShapeT

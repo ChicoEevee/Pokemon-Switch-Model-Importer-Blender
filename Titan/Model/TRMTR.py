@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Material import Material
+
 np = import_numpy()
 
 class TRMTR(object):
@@ -38,7 +41,6 @@ class TRMTR(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Material import Material
             obj = Material()
             obj.Init(self._tab.Bytes, x)
             return obj

@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .LodIndex import LodIndex
+
 np = import_numpy()
 
 class Lod(object):
@@ -31,7 +34,6 @@ class Lod(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from .LodIndex import LodIndex
             obj = LodIndex()
             obj.Init(self._tab.Bytes, x)
             return obj

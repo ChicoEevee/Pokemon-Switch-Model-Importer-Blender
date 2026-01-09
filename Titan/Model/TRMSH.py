@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .MeshShape import MeshShape, MeshShapeT
+
 np = import_numpy()
 
 class TRMSH(object):
@@ -38,7 +41,6 @@ class TRMSH(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.MeshShape import MeshShape
             obj = MeshShape()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -99,7 +101,6 @@ def TRMSHEnd(builder):
 def End(builder):
     return TRMSHEnd(builder)
 
-import Titan.Model.MeshShape
 try:
     from typing import List
 except:
@@ -110,7 +111,7 @@ class TRMSHT(object):
     # TRMSHT
     def __init__(self):
         self.unk0 = 0  # type: int
-        self.meshes = None  # type: List[Titan.Model.MeshShape.MeshShapeT]
+        self.meshes = None  # type: List[MeshShapeT]
         self.bufferName = None  # type: str
 
     @classmethod
@@ -141,7 +142,7 @@ class TRMSHT(object):
                 if trmsh.Meshes(i) is None:
                     self.meshes.append(None)
                 else:
-                    meshShape_ = Titan.Model.MeshShape.MeshShapeT.InitFromObj(trmsh.Meshes(i))
+                    meshShape_ = MeshShapeT.InitFromObj(trmsh.Meshes(i))
                     self.meshes.append(meshShape_)
         self.bufferName = trmsh.BufferName()
 

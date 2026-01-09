@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Vec3 import Vec3
+
 np = import_numpy()
 
 class Bounds(object):
@@ -29,7 +32,6 @@ class Bounds(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from .Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -40,7 +42,6 @@ class Bounds(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = o + self._tab.Pos
-            from .Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj

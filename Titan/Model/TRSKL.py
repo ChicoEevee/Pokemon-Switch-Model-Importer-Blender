@@ -4,6 +4,11 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Bone import Bone, BoneT
+from .IKControl import IKControl, IKControlT
+from .TransformNode import TransformNode, TransformNodeT
+
 np = import_numpy()
 
 class TRSKL(object):
@@ -38,7 +43,6 @@ class TRSKL(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.TransformNode import TransformNode
             obj = TransformNode()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -63,7 +67,6 @@ class TRSKL(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Bone import Bone
             obj = Bone()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -88,7 +91,6 @@ class TRSKL(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.IKControl import IKControl
             obj = IKControl()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -173,9 +175,6 @@ def TRSKLEnd(builder):
 def End(builder):
     return TRSKLEnd(builder)
 
-import Titan.Model.Bone
-import Titan.Model.IKControl
-import Titan.Model.TransformNode
 try:
     from typing import List
 except:
@@ -186,9 +185,9 @@ class TRSKLT(object):
     # TRSKLT
     def __init__(self):
         self.version = 0  # type: int
-        self.transformNodes = None  # type: List[Titan.Model.TransformNode.TransformNodeT]
-        self.bones = None  # type: List[Titan.Model.Bone.BoneT]
-        self.iks = None  # type: List[Titan.Model.IKControl.IKControlT]
+        self.transformNodes = None  # type: List[TransformNodeT]
+        self.bones = None  # type: List[BoneT]
+        self.iks = None  # type: List[IKControlT]
         self.rigOffset = 0  # type: int
 
     @classmethod
@@ -219,7 +218,7 @@ class TRSKLT(object):
                 if trskl.TransformNodes(i) is None:
                     self.transformNodes.append(None)
                 else:
-                    transformNode_ = Titan.Model.TransformNode.TransformNodeT.InitFromObj(trskl.TransformNodes(i))
+                    transformNode_ = TransformNodeT.InitFromObj(trskl.TransformNodes(i))
                     self.transformNodes.append(transformNode_)
         if not trskl.BonesIsNone():
             self.bones = []
@@ -227,7 +226,7 @@ class TRSKLT(object):
                 if trskl.Bones(i) is None:
                     self.bones.append(None)
                 else:
-                    bone_ = Titan.Model.Bone.BoneT.InitFromObj(trskl.Bones(i))
+                    bone_ = BoneT.InitFromObj(trskl.Bones(i))
                     self.bones.append(bone_)
         if not trskl.IksIsNone():
             self.iks = []
@@ -235,7 +234,7 @@ class TRSKLT(object):
                 if trskl.Iks(i) is None:
                     self.iks.append(None)
                 else:
-                    iKControl_ = Titan.Model.IKControl.IKControlT.InitFromObj(trskl.Iks(i))
+                    iKControl_ = IKControlT.InitFromObj(trskl.Iks(i))
                     self.iks.append(iKControl_)
         self.rigOffset = trskl.RigOffset()
 

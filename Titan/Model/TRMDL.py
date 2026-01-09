@@ -4,6 +4,13 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .trmeshes import trmeshes
+from .trskeleton import trskeleton
+from .Lod import Lod
+from .Bounds import Bounds
+from .Vec4 import Vec4
+
 np = import_numpy()
 
 class TRMDL(object):
@@ -38,7 +45,6 @@ class TRMDL(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from .trmeshes import trmeshes
             obj = trmeshes()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -61,7 +67,6 @@ class TRMDL(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from .trskeleton import trskeleton
             obj = trskeleton()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -94,7 +99,6 @@ class TRMDL(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from .Lod import Lod
             obj = Lod()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -117,7 +121,6 @@ class TRMDL(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from .Bounds import Bounds
             obj = Bounds()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -128,7 +131,6 @@ class TRMDL(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
             x = o + self._tab.Pos
-            from .Vec4 import Vec4
             obj = Vec4()
             obj.Init(self._tab.Bytes, x)
             return obj

@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Vec3 import Vec3, Vec3T
+
 np = import_numpy()
 
 class BoundingBox(object):
@@ -29,7 +32,6 @@ class BoundingBox(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -40,7 +42,6 @@ class BoundingBox(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -70,7 +71,6 @@ def BoundingBoxEnd(builder):
 def End(builder):
     return BoundingBoxEnd(builder)
 
-import Titan.Model.Vec3
 try:
     from typing import Optional
 except:
@@ -80,8 +80,8 @@ class BoundingBoxT(object):
 
     # BoundingBoxT
     def __init__(self):
-        self.min = None  # type: Optional[Titan.Model.Vec3.Vec3T]
-        self.max = None  # type: Optional[Titan.Model.Vec3.Vec3T]
+        self.min = None  # type: Optional[Vec3T]
+        self.max = None  # type: Optional[Vec3T]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -105,9 +105,9 @@ class BoundingBoxT(object):
         if boundingBox is None:
             return
         if boundingBox.Min() is not None:
-            self.min = Titan.Model.Vec3.Vec3T.InitFromObj(boundingBox.Min())
+            self.min = Vec3T.InitFromObj(boundingBox.Min())
         if boundingBox.Max() is not None:
-            self.max = Titan.Model.Vec3.Vec3T.InitFromObj(boundingBox.Max())
+            self.max = Vec3T.InitFromObj(boundingBox.Max())
 
     # BoundingBoxT
     def Pack(self, builder):

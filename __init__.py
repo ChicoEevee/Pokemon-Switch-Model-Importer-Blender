@@ -4,23 +4,19 @@
 import os
 
 import sys
-script_dir = os.path.dirname(__file__)
-if script_dir not in sys.path:
-    sys.path.append(script_dir)
 import ensurepip
-import sysconfig
 import subprocess
 from importlib import import_module
-import bpy
-
-from bpy.types import Panel, Operator, PropertyGroup
-from bpy.props import *
-from bpy.utils import register_class, unregister_class
-from bpy_extras.io_utils import ImportHelper, ExportHelper
 import struct
 import mathutils
 import math
 import site
+
+import bpy
+from bpy.types import Panel, Operator, PropertyGroup
+from bpy.props import *
+from bpy.utils import register_class, unregister_class
+from bpy_extras.io_utils import ImportHelper, ExportHelper
 # pylint: disable=import-outside-toplevel, wrong-import-position, import-error
 # pylint: disable=too-few-public-methods
 
@@ -59,6 +55,8 @@ class ImportGfmdl( bpy.types.Operator ):
         return {'RUNNING_MODAL'}
     
     def execute( self, context ):
+        if not attempt_install_flatbuffers(self, context):
+            return {"CANCELLED"}
         from .gfbmdl_import import ImportModel
         return ImportModel.load( self, context )
 
@@ -103,13 +101,14 @@ class TRSCNImport(bpy.types.Operator, ImportHelper):
         return {"FINISHED"}
 
     def import_trscn_file(self, directory, filename):
-        from Titan.TrinityScene import trinity_Scene, trinity_SceneObject, SceneEntry
+        from .Titan.TrinityScene.trinity_Scene import trinity_Scene
+        from .Titan.TrinityScene.trinity_SceneObject import trinity_SceneObject
 
         filepath = os.path.join(directory, filename)
         with open(filepath, "rb") as f:
             buf = f.read()
 
-        scene = trinity_Scene.trinity_Scene.GetRootAstrinity_Scene(buf, 0)
+        scene = trinity_Scene.GetRootAstrinity_Scene(buf, 0)
 
         root_name = os.path.splitext(filename)[0]
         root_empty = bpy.data.objects.new(root_name, None)
@@ -123,7 +122,7 @@ class TRSCNImport(bpy.types.Operator, ImportHelper):
 
             if type_name_str == "trinity_SceneObject":
                 nested_bytes = entry.NestedTypeAsNumpy().tobytes()
-                obj = trinity_SceneObject.trinity_SceneObject.GetRootAstrinity_SceneObject(nested_bytes, 0)
+                obj = trinity_SceneObject.GetRootAstrinity_SceneObject(nested_bytes, 0)
 
                 # Build SRT
                 srt = obj.Srt()
@@ -272,6 +271,8 @@ class EXPORT_OT_trmsh_trmbf(Operator, ExportHelper):
     filter_glob: StringProperty(default="*.trskl", options={"HIDDEN"})
 
     def execute(self, context):
+        if not attempt_install_flatbuffers(self, context):
+            return {"CANCELLED"}
         settings = context.scene.trmbf_export_settings
         abs_path = bpy.path.abspath(settings.filepath)
         if not os.path.isfile(abs_path):
@@ -376,12 +377,12 @@ class TRINSImport(bpy.types.Operator, ImportHelper):
         return {"FINISHED"}
 
     def import_trins_file(self, directory, filename):
-        import INS
+        from .Titan.Field.TRINS import TRINS
         filepath = os.path.join(directory, filename)
         with open(filepath, "rb") as f:
             buf = f.read()
 
-        trins = TRINS.TRINS.GetRootAsTRINS(buf, 0)
+        trins = TRINS.GetRootAsTRINS(buf, 0)
         ins_buf = trins.Buffer()
         data_bytes = bytearray(ins_buf.DataAsNumpy())
         instances_count = trins.InstanceCount()

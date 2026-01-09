@@ -4,6 +4,11 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Indexes import Indexes, IndexesT
+from .Morphs import Morphs, MorphsT
+from .Vertices import Vertices, VerticesT
+
 np = import_numpy()
 
 class Buffer(object):
@@ -31,7 +36,6 @@ class Buffer(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Indexes import Indexes
             obj = Indexes()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -56,7 +60,6 @@ class Buffer(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Vertices import Vertices
             obj = Vertices()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -81,7 +84,6 @@ class Buffer(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Morphs import Morphs
             obj = Morphs()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -147,9 +149,6 @@ def BufferEnd(builder):
 def End(builder):
     return BufferEnd(builder)
 
-import Titan.Model.Indexes
-import Titan.Model.Morphs
-import Titan.Model.Vertices
 try:
     from typing import List
 except:
@@ -159,9 +158,9 @@ class BufferT(object):
 
     # BufferT
     def __init__(self):
-        self.indexBuffer = None  # type: List[Titan.Model.Indexes.IndexesT]
-        self.vertexBuffer = None  # type: List[Titan.Model.Vertices.VerticesT]
-        self.morphs = None  # type: List[Titan.Model.Morphs.MorphsT]
+        self.indexBuffer = None  # type: List[IndexesT]
+        self.vertexBuffer = None  # type: List[VerticesT]
+        self.morphs = None  # type: List[MorphsT]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -190,7 +189,7 @@ class BufferT(object):
                 if buffer.IndexBuffer(i) is None:
                     self.indexBuffer.append(None)
                 else:
-                    indexes_ = Titan.Model.Indexes.IndexesT.InitFromObj(buffer.IndexBuffer(i))
+                    indexes_ = IndexesT.InitFromObj(buffer.IndexBuffer(i))
                     self.indexBuffer.append(indexes_)
         if not buffer.VertexBufferIsNone():
             self.vertexBuffer = []
@@ -198,7 +197,7 @@ class BufferT(object):
                 if buffer.VertexBuffer(i) is None:
                     self.vertexBuffer.append(None)
                 else:
-                    vertices_ = Titan.Model.Vertices.VerticesT.InitFromObj(buffer.VertexBuffer(i))
+                    vertices_ = VerticesT.InitFromObj(buffer.VertexBuffer(i))
                     self.vertexBuffer.append(vertices_)
         if not buffer.MorphsIsNone():
             self.morphs = []
@@ -206,7 +205,7 @@ class BufferT(object):
                 if buffer.Morphs(i) is None:
                     self.morphs.append(None)
                 else:
-                    morphs_ = Titan.Model.Morphs.MorphsT.InitFromObj(buffer.Morphs(i))
+                    morphs_ = MorphsT.InitFromObj(buffer.Morphs(i))
                     self.morphs.append(morphs_)
 
     # BufferT

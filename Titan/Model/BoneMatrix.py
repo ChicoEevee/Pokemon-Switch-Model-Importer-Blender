@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Vec3 import Vec3, Vec3T
+
 np = import_numpy()
 
 class BoneMatrix(object):
@@ -29,7 +32,6 @@ class BoneMatrix(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -40,7 +42,6 @@ class BoneMatrix(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -51,7 +52,6 @@ class BoneMatrix(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -62,7 +62,6 @@ class BoneMatrix(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -104,7 +103,6 @@ def BoneMatrixEnd(builder):
 def End(builder):
     return BoneMatrixEnd(builder)
 
-import Titan.Model.Vec3
 try:
     from typing import Optional
 except:
@@ -114,10 +112,10 @@ class BoneMatrixT(object):
 
     # BoneMatrixT
     def __init__(self):
-        self.x = None  # type: Optional[Titan.Model.Vec3.Vec3T]
-        self.y = None  # type: Optional[Titan.Model.Vec3.Vec3T]
-        self.z = None  # type: Optional[Titan.Model.Vec3.Vec3T]
-        self.w = None  # type: Optional[Titan.Model.Vec3.Vec3T]
+        self.x = None  # type: Optional[Vec3T]
+        self.y = None  # type: Optional[Vec3T]
+        self.z = None  # type: Optional[Vec3T]
+        self.w = None  # type: Optional[Vec3T]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -141,13 +139,13 @@ class BoneMatrixT(object):
         if boneMatrix is None:
             return
         if boneMatrix.X() is not None:
-            self.x = Titan.Model.Vec3.Vec3T.InitFromObj(boneMatrix.X())
+            self.x = Vec3T.InitFromObj(boneMatrix.X())
         if boneMatrix.Y() is not None:
-            self.y = Titan.Model.Vec3.Vec3T.InitFromObj(boneMatrix.Y())
+            self.y = Vec3T.InitFromObj(boneMatrix.Y())
         if boneMatrix.Z() is not None:
-            self.z = Titan.Model.Vec3.Vec3T.InitFromObj(boneMatrix.Z())
+            self.z = Vec3T.InitFromObj(boneMatrix.Z())
         if boneMatrix.W() is not None:
-            self.w = Titan.Model.Vec3.Vec3T.InitFromObj(boneMatrix.W())
+            self.w = Vec3T.InitFromObj(boneMatrix.W())
 
     # BoneMatrixT
     def Pack(self, builder):

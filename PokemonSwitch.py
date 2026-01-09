@@ -25,10 +25,9 @@ import shutil
 import sys
 import numpy as np
 import requests
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
-from Titan.Model.TRMDL import TRMDL
-from Titan.Model.TRSKL import TRSKL
-from Titan.Model import TRMTR, Material, Shader, Texture, FloatParameter, Float4Parameter, StringParameter
+from .Titan.Model.TRMDL import TRMDL
+from .Titan.Model.TRSKL import TRSKL
+from .Titan.Model import TRMTR, Material, Shader, Texture, FloatParameter, Float4Parameter, StringParameter
 import flatbuffers
 IN_BLENDER_ENV = True
 blender_version = bpy.app.version

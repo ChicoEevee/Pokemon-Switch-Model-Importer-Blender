@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Vec3 import Vec3, Vec3T
+
 np = import_numpy()
 
 class Transform(object):
@@ -29,7 +32,6 @@ class Transform(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -40,7 +42,6 @@ class Transform(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -51,7 +52,6 @@ class Transform(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -87,7 +87,6 @@ def TransformEnd(builder):
 def End(builder):
     return TransformEnd(builder)
 
-import Titan.Model.Vec3
 try:
     from typing import Optional
 except:
@@ -97,9 +96,9 @@ class TransformT(object):
 
     # TransformT
     def __init__(self):
-        self.vecScale = None  # type: Optional[Titan.Model.Vec3.Vec3T]
-        self.vecRot = None  # type: Optional[Titan.Model.Vec3.Vec3T]
-        self.vecTranslate = None  # type: Optional[Titan.Model.Vec3.Vec3T]
+        self.vecScale = None  # type: Optional[Vec3T]
+        self.vecRot = None  # type: Optional[Vec3T]
+        self.vecTranslate = None  # type: Optional[Vec3T]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -123,11 +122,11 @@ class TransformT(object):
         if transform is None:
             return
         if transform.VecScale() is not None:
-            self.vecScale = Titan.Model.Vec3.Vec3T.InitFromObj(transform.VecScale())
+            self.vecScale = Vec3T.InitFromObj(transform.VecScale())
         if transform.VecRot() is not None:
-            self.vecRot = Titan.Model.Vec3.Vec3T.InitFromObj(transform.VecRot())
+            self.vecRot = Vec3T.InitFromObj(transform.VecRot())
         if transform.VecTranslate() is not None:
-            self.vecTranslate = Titan.Model.Vec3.Vec3T.InitFromObj(transform.VecTranslate())
+            self.vecTranslate = Vec3T.InitFromObj(transform.VecTranslate())
 
     # TransformT
     def Pack(self, builder):

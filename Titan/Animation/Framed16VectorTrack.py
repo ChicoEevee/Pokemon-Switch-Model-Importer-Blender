@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Vec3 import Vec3
+
 np = import_numpy()
 
 class Framed16VectorTrack(object):
@@ -57,7 +60,6 @@ class Framed16VectorTrack(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 12
-            from Titan.Animation.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj

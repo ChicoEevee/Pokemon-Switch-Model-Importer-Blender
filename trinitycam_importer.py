@@ -9,12 +9,10 @@ import math
 import bpy
 from mathutils import Vector, Quaternion, Matrix
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
-
-from Titan.Animation import TRCMA, Vec3, sVec3
-from Titan.Animation import RotationTrack, FixedRotationTrack, DynamicRotationTrack, Framed16RotationTrack, Framed8RotationTrack
-from Titan.Animation import VectorTrack, FixedVectorTrack, DynamicVectorTrack, Framed16VectorTrack, Framed8VectorTrack
-from Titan.Animation import FloatTrack, FixedFloatTrack, DynamicFloatTrack, Framed16FloatTrack, Framed8FloatTrack
+from .Titan.Animation import TRCMA, Vec3, sVec3
+from .Titan.Animation import RotationTrack, FixedRotationTrack, DynamicRotationTrack, Framed16RotationTrack, Framed8RotationTrack
+from .Titan.Animation import VectorTrack, FixedVectorTrack, DynamicVectorTrack, Framed16VectorTrack, Framed8VectorTrack
+from .Titan.Animation import FloatTrack, FixedFloatTrack, DynamicFloatTrack, Framed16FloatTrack, Framed8FloatTrack
 
 
 

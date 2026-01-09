@@ -4,6 +4,10 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .VertexAccessor import VertexAccessor, VertexAccessorT
+from .VertexSize import VertexSize, VertexSizeT
+
 np = import_numpy()
 
 class VertexAccessors(object):
@@ -31,7 +35,6 @@ class VertexAccessors(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.VertexAccessor import VertexAccessor
             obj = VertexAccessor()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -56,7 +59,6 @@ class VertexAccessors(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.VertexSize import VertexSize
             obj = VertexSize()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -110,8 +112,6 @@ def VertexAccessorsEnd(builder):
 def End(builder):
     return VertexAccessorsEnd(builder)
 
-import Titan.Model.VertexAccessor
-import Titan.Model.VertexSize
 try:
     from typing import List
 except:
@@ -121,8 +121,8 @@ class VertexAccessorsT(object):
 
     # VertexAccessorsT
     def __init__(self):
-        self.attrs = None  # type: List[Titan.Model.VertexAccessor.VertexAccessorT]
-        self.size = None  # type: List[Titan.Model.VertexSize.VertexSizeT]
+        self.attrs = None  # type: List[VertexAccessorT]
+        self.size = None  # type: List[VertexSizeT]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -151,7 +151,7 @@ class VertexAccessorsT(object):
                 if vertexAccessors.Attrs(i) is None:
                     self.attrs.append(None)
                 else:
-                    vertexAccessor_ = Titan.Model.VertexAccessor.VertexAccessorT.InitFromObj(vertexAccessors.Attrs(i))
+                    vertexAccessor_ = VertexAccessorT.InitFromObj(vertexAccessors.Attrs(i))
                     self.attrs.append(vertexAccessor_)
         if not vertexAccessors.SizeIsNone():
             self.size = []
@@ -159,7 +159,7 @@ class VertexAccessorsT(object):
                 if vertexAccessors.Size(i) is None:
                     self.size.append(None)
                 else:
-                    vertexSize_ = Titan.Model.VertexSize.VertexSizeT.InitFromObj(vertexAccessors.Size(i))
+                    vertexSize_ = VertexSizeT.InitFromObj(vertexAccessors.Size(i))
                     self.size.append(vertexSize_)
 
     # VertexAccessorsT

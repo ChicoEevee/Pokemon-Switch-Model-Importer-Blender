@@ -11,27 +11,25 @@ import bpy
 import flatbuffers
 from mathutils import Vector
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
-
 # pylint: disable=wrong-import-position, import-error, too-many-statements, too-many-branches
 # pylint: disable=too-many-locals
 
-from Titan.Model.TRMBF import TRMBFT
-from Titan.Model.Buffer import BufferT
-from Titan.Model.Indexes import IndexesT
-from Titan.Model.TRMSH import TRMSHT
-from Titan.Model.Vertices import VerticesT
-from Titan.Model.BoundingBox import BoundingBoxT
-from Titan.Model.MeshShape import MeshShapeT
-from Titan.Model.Vec3 import Vec3T
-from Titan.Model.VertexAccessors import VertexAccessorsT
-from Titan.Model.Influence import InfluenceT
-from Titan.Model.MaterialInfo import MaterialInfoT
-from Titan.Model.Sphere import SphereT
-from Titan.Model.VertexAccessor import VertexAccessorT
-from Titan.Model.VertexSize import VertexSizeT
-from Titan.Model.VisShape import VisShapeT
-from Titan.Model.TRSKL import TRSKL
+from .Titan.Model.TRMBF import TRMBFT
+from .Titan.Model.Buffer import BufferT
+from .Titan.Model.Indexes import IndexesT
+from .Titan.Model.TRMSH import TRMSHT
+from .Titan.Model.Vertices import VerticesT
+from .Titan.Model.BoundingBox import BoundingBoxT
+from .Titan.Model.MeshShape import MeshShapeT
+from .Titan.Model.Vec3 import Vec3T
+from .Titan.Model.VertexAccessors import VertexAccessorsT
+from .Titan.Model.Influence import InfluenceT
+from .Titan.Model.MaterialInfo import MaterialInfoT
+from .Titan.Model.Sphere import SphereT
+from .Titan.Model.VertexAccessor import VertexAccessorT
+from .Titan.Model.VertexSize import VertexSizeT
+from .Titan.Model.VisShape import VisShapeT
+from .Titan.Model.TRSKL import TRSKL
 
 vertFormat = struct.Struct("<fff")
 normFormat = struct.Struct("<eeee")

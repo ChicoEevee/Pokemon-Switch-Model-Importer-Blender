@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Buffer import Buffer, BufferT
+
 np = import_numpy()
 
 class TRMBF(object):
@@ -38,7 +41,6 @@ class TRMBF(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.Buffer import Buffer
             obj = Buffer()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -86,7 +88,6 @@ def TRMBFEnd(builder):
 def End(builder):
     return TRMBFEnd(builder)
 
-import Titan.Model.Buffer
 try:
     from typing import List
 except:
@@ -97,7 +98,7 @@ class TRMBFT(object):
     # TRMBFT
     def __init__(self):
         self.unused = 0  # type: int
-        self.buffers = None  # type: List[Titan.Model.Buffer.BufferT]
+        self.buffers = None  # type: List[BufferT]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -127,7 +128,7 @@ class TRMBFT(object):
                 if trmbf.Buffers(i) is None:
                     self.buffers.append(None)
                 else:
-                    buffer_ = Titan.Model.Buffer.BufferT.InitFromObj(trmbf.Buffers(i))
+                    buffer_ = BufferT.InitFromObj(trmbf.Buffers(i))
                     self.buffers.append(buffer_)
 
     # TRMBFT

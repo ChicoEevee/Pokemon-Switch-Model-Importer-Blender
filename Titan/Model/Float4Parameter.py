@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .RGBA import RGBA
+
 np = import_numpy()
 
 class Float4Parameter(object):
@@ -36,7 +39,6 @@ class Float4Parameter(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.RGBA import RGBA
             obj = RGBA()
             obj.Init(self._tab.Bytes, x)
             return obj

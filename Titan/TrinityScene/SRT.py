@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Vec3f import Vec3f
+
 np = import_numpy()
 
 class SRT(object):
@@ -29,7 +32,6 @@ class SRT(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.TrinityScene.Vec3f import Vec3f
             obj = Vec3f()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -40,7 +42,6 @@ class SRT(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.TrinityScene.Vec3f import Vec3f
             obj = Vec3f()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -51,7 +52,6 @@ class SRT(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.TrinityScene.Vec3f import Vec3f
             obj = Vec3f()
             obj.Init(self._tab.Bytes, x)
             return obj

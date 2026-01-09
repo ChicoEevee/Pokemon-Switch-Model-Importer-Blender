@@ -4,6 +4,10 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Vec3 import Vec3, Vec3T
+from .Vec4 import Vec4, Vec4T
+
 np = import_numpy()
 
 class IKControl(object):
@@ -64,7 +68,6 @@ class IKControl(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -75,7 +78,6 @@ class IKControl(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec4 import Vec4
             obj = Vec4()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -135,8 +137,6 @@ def IKControlEnd(builder):
 def End(builder):
     return IKControlEnd(builder)
 
-import Titan.Model.Vec3
-import Titan.Model.Vec4
 try:
     from typing import Optional
 except:
@@ -151,8 +151,8 @@ class IKControlT(object):
         self.ikChainEnd = None  # type: str
         self.ikType = None  # type: str
         self.res4 = 0  # type: int
-        self.ikPos = None  # type: Optional[Titan.Model.Vec3.Vec3T]
-        self.ikRot = None  # type: Optional[Titan.Model.Vec4.Vec4T]
+        self.ikPos = None  # type: Optional[Vec3T]
+        self.ikRot = None  # type: Optional[Vec4T]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -181,9 +181,9 @@ class IKControlT(object):
         self.ikType = ikcontrol.IkType()
         self.res4 = ikcontrol.Res4()
         if ikcontrol.IkPos() is not None:
-            self.ikPos = Titan.Model.Vec3.Vec3T.InitFromObj(ikcontrol.IkPos())
+            self.ikPos = Vec3T.InitFromObj(ikcontrol.IkPos())
         if ikcontrol.IkRot() is not None:
-            self.ikRot = Titan.Model.Vec4.Vec4T.InitFromObj(ikcontrol.IkRot())
+            self.ikRot = Vec4T.InitFromObj(ikcontrol.IkRot())
 
     # IKControlT
     def Pack(self, builder):

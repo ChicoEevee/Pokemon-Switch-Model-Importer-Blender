@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .RGBA import RGBA
+
 np = import_numpy()
 
 class SamplerState(object):
@@ -113,7 +116,6 @@ class SamplerState(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(28))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.RGBA import RGBA
             obj = RGBA()
             obj.Init(self._tab.Bytes, x)
             return obj

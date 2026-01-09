@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .SceneEntry import SceneEntry
+
 np = import_numpy()
 
 class trinity_Scene(object):
@@ -59,7 +62,6 @@ class trinity_Scene(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.TrinityScene.SceneEntry import SceneEntry
             obj = SceneEntry()
             obj.Init(self._tab.Bytes, x)
             return obj

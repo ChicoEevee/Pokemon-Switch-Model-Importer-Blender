@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .MorphBuffer import MorphBuffer, MorphBufferT
+
 np = import_numpy()
 
 class Morphs(object):
@@ -31,7 +34,6 @@ class Morphs(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from Titan.Model.MorphBuffer import MorphBuffer
             obj = MorphBuffer()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -73,7 +75,6 @@ def MorphsEnd(builder):
 def End(builder):
     return MorphsEnd(builder)
 
-import Titan.Model.MorphBuffer
 try:
     from typing import List
 except:
@@ -83,7 +84,7 @@ class MorphsT(object):
 
     # MorphsT
     def __init__(self):
-        self.morphBuffer = None  # type: List[Titan.Model.MorphBuffer.MorphBufferT]
+        self.morphBuffer = None  # type: List[MorphBufferT]
 
     @classmethod
     def InitFromBuf(cls, buf, pos):
@@ -112,7 +113,7 @@ class MorphsT(object):
                 if morphs.MorphBuffer(i) is None:
                     self.morphBuffer.append(None)
                 else:
-                    morphBuffer_ = Titan.Model.MorphBuffer.MorphBufferT.InitFromObj(morphs.MorphBuffer(i))
+                    morphBuffer_ = MorphBufferT.InitFromObj(morphs.MorphBuffer(i))
                     self.morphBuffer.append(morphBuffer_)
 
     # MorphsT

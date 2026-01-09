@@ -4,6 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .sVec3 import sVec3
+
 np = import_numpy()
 
 class DynamicRotationTrack(object):
@@ -30,7 +33,6 @@ class DynamicRotationTrack(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 6
-            from Titan.Animation.sVec3 import sVec3
             obj = sVec3()
             obj.Init(self._tab.Bytes, x)
             return obj

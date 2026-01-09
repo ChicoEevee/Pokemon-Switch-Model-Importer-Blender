@@ -4,6 +4,10 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
+from .Transform import Transform, TransformT
+from .Vec3 import Vec3, Vec3T
+
 np = import_numpy()
 
 class TransformNode(object):
@@ -36,7 +40,6 @@ class TransformNode(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from Titan.Model.Transform import Transform
             obj = Transform()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -47,7 +50,6 @@ class TransformNode(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -58,7 +60,6 @@ class TransformNode(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             x = o + self._tab.Pos
-            from Titan.Model.Vec3 import Vec3
             obj = Vec3()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -152,8 +153,6 @@ def TransformNodeEnd(builder):
 def End(builder):
     return TransformNodeEnd(builder)
 
-import Titan.Model.Transform
-import Titan.Model.Vec3
 try:
     from typing import Optional
 except:
@@ -164,9 +163,9 @@ class TransformNodeT(object):
     # TransformNodeT
     def __init__(self):
         self.name = None  # type: str
-        self.transform = None  # type: Optional[Titan.Model.Transform.TransformT]
-        self.scalePivot = None  # type: Optional[Titan.Model.Vec3.Vec3T]
-        self.rotatePivot = None  # type: Optional[Titan.Model.Vec3.Vec3T]
+        self.transform = None  # type: Optional[TransformT]
+        self.scalePivot = None  # type: Optional[Vec3T]
+        self.rotatePivot = None  # type: Optional[Vec3T]
         self.parentIdx = -1  # type: int
         self.rigIdx = -1  # type: int
         self.effectNode = None  # type: str
@@ -195,11 +194,11 @@ class TransformNodeT(object):
             return
         self.name = transformNode.Name()
         if transformNode.Transform() is not None:
-            self.transform = Titan.Model.Transform.TransformT.InitFromObj(transformNode.Transform())
+            self.transform = TransformT.InitFromObj(transformNode.Transform())
         if transformNode.ScalePivot() is not None:
-            self.scalePivot = Titan.Model.Vec3.Vec3T.InitFromObj(transformNode.ScalePivot())
+            self.scalePivot = Vec3T.InitFromObj(transformNode.ScalePivot())
         if transformNode.RotatePivot() is not None:
-            self.rotatePivot = Titan.Model.Vec3.Vec3T.InitFromObj(transformNode.RotatePivot())
+            self.rotatePivot = Vec3T.InitFromObj(transformNode.RotatePivot())
         self.parentIdx = transformNode.ParentIdx()
         self.rigIdx = transformNode.RigIdx()
         self.effectNode = transformNode.EffectNode()

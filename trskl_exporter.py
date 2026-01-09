@@ -9,12 +9,10 @@ import bpy
 from mathutils import Matrix
 import flatbuffers
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
-
 # pylint: disable=wrong-import-position, import-error, too-many-statements, too-many-branches
 # pylint: disable=too-many-locals
 
-from Titan.Model import TRSKL, TransformNode, Transform, Bone, BoneMatrix, Vec3
+from .Titan.Model import TRSKL, TransformNode, Transform, Bone, BoneMatrix, Vec3
 
 
 def export_skeleton(armature_obj: bpy.types.Object) -> int | bytearray:
