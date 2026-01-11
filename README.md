@@ -5,6 +5,8 @@ Credits to [Shararamosh](https://github.com/Shararamosh) for the work and lettin
 
 HUGE thanks to Random Talking Bush for making the original maxscript for this https://www.vg-resource.com/thread-29836.html, slowly were doing a remake using flatbuffers so no more will be based on the RTalkingBush script. Thank you everybory who uses the blender addon.
 
+[Tutorial for Exporting TRMBF and TRMSH](https://github.com/ChicoEevee/Pokemon-Switch-Model-Importer-Blender/wiki/Exporting-TRMBF-and-TRMSH)
+
 Pokémon Scarlet Violet Raw Files with PNGs
 
 [Unique Trainers (model_uq)](https://drive.google.com/file/d/10BeIPdE5Yw_lJPHMLd00l6UR8Ujn3Hpf/view?usp=sharing) 
