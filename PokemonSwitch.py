@@ -2076,7 +2076,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                                 except:
                                     continue    
                                 #normals
-                                if blender_version[0] < 3:
+                                if blender_version[0] <= 3:
                                     new_object.data.use_auto_smooth = True
                                 new_object.data.normals_split_custom_set_from_vertices(normal_array)
 
