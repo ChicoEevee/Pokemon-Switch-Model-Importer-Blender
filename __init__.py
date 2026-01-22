@@ -266,18 +266,28 @@ class TRMBFMSHExportSettings(PropertyGroup):
 class EXPORT_OT_trmsh_trmbf(Operator, ExportHelper):
     bl_idname = "export_scene.trmsh_trmbf"
     bl_label = "Export as TRMSH, TRMBF"
-    bl_description = "Export selected Meshes as TRMSH and TRMBF files for selected TRSKL file"
-    filename_ext = ".trskl"
-    filter_glob: StringProperty(default="*.trskl", options={"HIDDEN"})
+    bl_description = "Export selected Meshes as TRMSH and TRMBF using selected TRMDL file as base"
+    filename_ext = ".trmdl"
+    filter_glob: StringProperty(default="*.trmdl", options={"HIDDEN"})
 
     def execute(self, context):
-        if not attempt_install_flatbuffers(self, context):
-            return {"CANCELLED"}
         settings = context.scene.trmbf_export_settings
-        abs_path = bpy.path.abspath(settings.filepath)
-        if not os.path.isfile(abs_path):
-            self.report({"ERROR"}, f"{os.path.basename(abs_path)} is not a TRSKL file.")
-            return {"CANCELLED"}
+        trskl_path = bpy.path.abspath(settings.filepath)
+
+        from .trmshbf_exporter import trskl_to_dict, export_trmbf_trmsh
+
+        bone_dict = None
+        if os.path.isfile(trskl_path):
+            try:
+                bone_dict = trskl_to_dict(
+                    trskl_path, settings.use_base_trskl,
+                    bpy.path.abspath(settings.extra_file)
+                )
+            except Exception as e:
+                self.report({"WARNING"}, f"Could not load TRSKL: {e}. Exporting without skinning.")
+                bone_dict = None
+        else:
+            self.report({"INFO"}, "No TRSKL file provided. Exporting mesh without skinning.")
 
         export_settings = {
             "normal": settings.use_normal,
@@ -287,26 +297,27 @@ class EXPORT_OT_trmsh_trmbf(Operator, ExportHelper):
             "uv_count": settings.uv_count,
             "color": settings.use_color,
             "color_count": settings.color_count,
-            "skinning": settings.use_skinning
+            "skinning": settings.use_skinning and bool(bone_dict)
         }
 
-        from .trmshbf_exporter import trskl_to_dict, export_trmbf_trmsh
+        base_filepath = bpy.path.abspath(self.filepath)
+        base_filename, _ = os.path.splitext(os.path.basename(base_filepath))
+        dirpath = os.path.dirname(base_filepath)
+        trmbf_path = os.path.join(dirpath, base_filename + ".trmbf")
+        trmsh_path = os.path.join(dirpath, base_filename + ".trmsh")
 
-        bone_dict = trskl_to_dict(abs_path, settings.use_base_trskl, bpy.path.abspath(settings.extra_file))
-        filename, _ = os.path.splitext(abs_path)
-        file_path = filename + ".trmbf"
-        trmbf, trmsh = export_trmbf_trmsh(export_settings, bone_dict, os.path.basename(abs_path))
+        # Export
+        trmbf, trmsh = export_trmbf_trmsh(export_settings, bone_dict, base_filename)
 
-        if trmbf is not None:
-            with open(file_path, "wb") as file:
-                file.write(trmbf)
-                print(f"TRMBF successfully exported to {file_path}.")
+        if trmbf:
+            with open(trmbf_path, "wb") as f:
+                f.write(trmbf)
+            print(f"TRMBF exported: {trmbf_path}")
 
-        if trmsh is not None:
-            file_path = filename + ".trmsh"
-            with open(file_path, "wb") as file:
-                file.write(trmsh)
-                print(f"TRMSH successfully exported to {file_path}.")
+        if trmsh:
+            with open(trmsh_path, "wb") as f:
+                f.write(trmsh)
+            print(f"TRMSH exported: {trmsh_path}")
 
         return {"FINISHED"}
 

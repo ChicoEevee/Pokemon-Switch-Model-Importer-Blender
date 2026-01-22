@@ -266,7 +266,7 @@ def get_trmsh_data(obj: bpy.types.Object, settings: dict) -> dict:
     return mesh
 
 
-def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict) -> dict:
+def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict | None = None) -> dict:
     assert obj.type == "MESH"
 
     mesh = obj.data
@@ -274,7 +274,7 @@ def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict) -> di
         mesh.calc_normals_split()
     mesh.calc_tangents()
 
-    uv_layer = mesh.uv_layers.active.data
+    uv_layer = mesh.uv_layers.active.data if settings.get("uv") else None
 
     vert_data = []
     poly_data = []
@@ -295,18 +295,13 @@ def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict) -> di
                 key.append(tuple(loop.normal))
 
             if settings.get("tangent") == 1:
-                key.append((
-                    loop.tangent.x,
-                    loop.tangent.y,
-                    loop.tangent.z,
-                    loop.bitangent_sign
-                ))
+                key.append((loop.tangent.x, loop.tangent.y, loop.tangent.z, loop.bitangent_sign))
 
-            if settings.get("uv") == 1:
+            if settings.get("uv") == 1 and uv_layer:
                 uv = uv_layer[loop_index].uv
                 key.append((uv.x, uv.y))
 
-            if settings.get("skinning") == 1:
+            if settings.get("skinning") == 1 and bone_dict:
                 groups = []
                 for gp in vert.groups:
                     name = obj.vertex_groups[gp.group].name
@@ -324,22 +319,15 @@ def get_trmbf_data(obj: bpy.types.Object, settings: dict, bone_dict: dict) -> di
                 export_index = len(vert_data)
                 vert_map[key] = export_index
 
-                vert_d = []
-                co = vert.co
-                vert_d.append((co.x, co.y, co.z))
+                vert_d = [tuple(vert.co)]
 
                 if settings.get("normal") == 1:
-                    n = loop.normal
-                    vert_d.append((n.x, n.y, n.z))
-
+                    vert_d.append(tuple(loop.normal))
                 if settings.get("tangent") == 1:
-                    t = loop.tangent
-                    vert_d.append((t.x, t.y, t.z, loop.bitangent_sign))
-
-                if settings.get("uv") == 1:
+                    vert_d.append((loop.tangent.x, loop.tangent.y, loop.tangent.z, loop.bitangent_sign))
+                if settings.get("uv") == 1 and uv_layer:
                     vert_d.append((uv.x, uv.y))
-
-                if settings.get("skinning") == 1:
+                if settings.get("skinning") == 1 and bone_dict:
                     vert_d.append(groups[:4])
 
                 vert_data.append(vert_d)
