@@ -275,7 +275,13 @@ class EXPORT_OT_trmsh_trmbf(Operator, ExportHelper):
         trskl_path = bpy.path.abspath(settings.filepath)
 
         from .trmshbf_exporter import trskl_to_dict, export_trmbf_trmsh
-
+        for obj in bpy.context.selected_objects:
+            if obj.type != "MESH":
+                continue
+            for poly in obj.data.polygons:
+                if len(poly.vertices) != 3:
+                    self.report({"ERROR"}, f"Mesh '{obj.name}' is not triangulated.")
+                    return {"CANCELLED"}
         bone_dict = None
         if os.path.isfile(trskl_path):
             try:
