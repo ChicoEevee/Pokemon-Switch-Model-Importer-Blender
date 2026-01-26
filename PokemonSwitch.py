@@ -981,11 +981,9 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                         normal_image_texture.image.colorspace_settings.name = "Non-Color"
                         separate_color2 = material.node_tree.nodes.new(ShaderNodeSeparateRGB)
                         combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
-                        invert_green = material.node_tree.nodes.new("ShaderNodeInvert")
                         material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
                         material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
-                        material.node_tree.links.new(separate_color2.outputs[1], invert_green.inputs[1])
-                        material.node_tree.links.new(invert_green.outputs[0], combine_color2.inputs[1])
+                        material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
                         material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
                         material.node_tree.links.new(combine_color2.outputs[0], shadegroupnodes.inputs['NormalMap'])
 
