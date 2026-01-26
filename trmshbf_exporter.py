@@ -629,7 +629,7 @@ def export_trmbf_trmsh(export_settings: dict, bone_dict: dict,
     trmbf = builder.Output()
     trmsh = TRMSHT()
     trmsh.meshes = meshes
-    trmsh.bufferName = buffer_name.replace("trskl","trmbf")
+    trmsh.bufferName = buffer_name.rsplit(".",1)[0] + ".trmbf"
     builder = flatbuffers.Builder()
     trmsh = trmsh.Pack(builder)
     builder.Finish(trmsh)
@@ -733,3 +733,4 @@ def create_mesh_shape(mesh_obj: bpy.types.Object, export_settings: dict) -> Mesh
     mesh_shape.meshName = mesh_data["mesh_name"]
     mesh_shape.unk13 = mesh_data["unk13"]
     return mesh_shape
+
