@@ -1065,7 +1065,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                         try:
                             material.node_tree.links.new(uv_node.outputs["UV"], opacity_image_texture.inputs["Vector"])
                         except:
-                            material.node_tree.links.new(uv_node.outputs["UV"], highlight_image_texture.inputs["Vector"])
+                            try:
+                                material.node_tree.links.new(uv_node.outputs["UV"], highlight_image_texture.inputs["Vector"])
+                            except:
+                                print("Failed setting ÜV to opacitymap or hightlightmap")
                     if mat["mat_uvindexlayermask"] != -1:
                         material.node_tree.links.new(uv_node.outputs["UV"], lym_image_texture.inputs["Vector"])
                     if mat["mat_uvindexlayer1"] != -1:
