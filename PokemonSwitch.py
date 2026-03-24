@@ -24,13 +24,23 @@ import glob
 import shutil
 import sys
 import numpy as np
-import requests
 from .Titan.Model.TRMDL import TRMDL
 from .Titan.Model.TRSKL import TRSKL
 from .Titan.Model import TRMTR, Material, Shader, Texture, FloatParameter, Float4Parameter, StringParameter
 import flatbuffers
 IN_BLENDER_ENV = True
 blender_version = bpy.app.version
+EYE_MATERIAL_HINTS = (
+    "eye",
+    "eyel",
+    "eyer",
+    "iris",
+    "pupil",
+    "eyeball",
+    "eyehigh",
+    "hitomi",
+    "face_eye",
+)
 
 def find_player_base_path(filep, chara_check):
     """Determine the correct TRSKL path for the player character."""
@@ -60,6 +70,64 @@ def find_player_base_path(filep, chara_check):
             print(path, "exists")
             return full_path
     return None
+
+
+def is_eye_material(mat_name, texture_names):
+    """Detect eye materials by material or texture naming conventions."""
+    names_to_check = [mat_name]
+    if texture_names:
+        names_to_check.extend(texture_names)
+
+    for name in names_to_check:
+        normalized_name = os.path.basename(str(name)).lower()
+        if any(hint in normalized_name for hint in EYE_MATERIAL_HINTS):
+            return True
+    return False
+
+
+def configure_material_render_settings(material, mat, is_eye=False):
+    """
+    Apply conservative Eevee-safe defaults.
+
+    Eye materials often use alpha data for masking/highlights, but old blanket
+    BLEND settings are fragile in newer Eevee because they rely on transparency
+    sorting that can make the eyes disappear or render inconsistently.
+    """
+    alpha_setting = mat.get("mat_alpha_setting", "") or ""
+    alpha_setting_lower = alpha_setting.lower()
+    has_alpha_test = str(mat.get("mat_enablealpha", "")).lower() == "true"
+    has_opacity_map = bool(mat.get("mat_opacity_map"))
+    needs_transparency = "opaque" not in alpha_setting_lower
+
+    blend_method = 'OPAQUE'
+    shadow_method = 'OPAQUE'
+
+    if is_eye:
+        if has_alpha_test or "clip" in alpha_setting_lower or "mask" in alpha_setting_lower:
+            blend_method = 'CLIP'
+            shadow_method = 'CLIP'
+        else:
+            # Eye materials are safer as opaque by default in Blender 5.x / Eevee.
+            blend_method = 'OPAQUE'
+            shadow_method = 'OPAQUE'
+    elif needs_transparency:
+        if has_alpha_test or "clip" in alpha_setting_lower or "mask" in alpha_setting_lower:
+            blend_method = 'CLIP'
+            shadow_method = 'CLIP'
+        elif has_opacity_map or "blend" in alpha_setting_lower or "trans" in alpha_setting_lower:
+            blend_method = 'BLEND'
+            shadow_method = 'HASHED'
+
+    material.blend_method = blend_method
+    if hasattr(material, "shadow_method"):
+        material.shadow_method = shadow_method
+    if blend_method == 'CLIP' and hasattr(material, "alpha_threshold"):
+        material.alpha_threshold = 0.5
+
+    # Blender 5.x / recent Eevee versions expose a separate surface render mode.
+    # Use the explicit blended path only when the material really needs sorting.
+    if hasattr(material, "surface_render_method"):
+        material.surface_render_method = 'BLENDED' if blend_method == 'BLEND' else 'DITHERED'
 
 
 def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, enable_rim, enable_mega_effect):
@@ -702,15 +770,16 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
         mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
         
         if IN_BLENDER_ENV:
-            if not 'PokemonShader' in bpy.data.materials or not 'PokemonShader' in bpy.data.materials:
+            if 'PokemonShader' not in bpy.data.materials:
                 blend_path = os.path.join(os.path.dirname(__file__), "SCVIShader.blend")
-                try:
-                    response = requests.get("https://raw.githubusercontent.com/ChicoEevee/Pokemon-Switch-V2-Model-Importer-Blender/master/SCVIShader.blend", stream=True)
-                    if response.status_code == 200:
-                        with open(blend_path, 'wb') as file:
-                            file.write(response.content)
-                except:
-                    print("Offline Mode")
+                # The addon ships with a shader library already. Overwriting that file
+                # from the old V2 URL during import was unsafe because it could replace a
+                # compatible local shader with an outdated one and break node/texture links.
+                if not os.path.exists(blend_path):
+                    raise FileNotFoundError(
+                        f"Missing bundled shader library: {blend_path}. "
+                        "Reinstall the addon to restore SCVIShader.blend."
+                    )
                 with bpy.data.libraries.load(blend_path, link=False) as (data_from, data_to):
                     data_to.materials = data_from.materials
                     print('! Loaded shader blend file.')
@@ -737,6 +806,15 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 specular_image_texture = None
                 occlusion_image_texture = None
                 rimlight_image_texture = None
+                texture_names = []
+                for texture_entry in mat["textures"]:
+                    texture_name = texture_entry.get("texture_name")
+                    texture_file = texture_entry.get("texture_file")
+                    if texture_name:
+                        texture_names.append(texture_name)
+                    if texture_file:
+                        texture_names.append(texture_file)
+                eye_material = is_eye_material(mat["mat_name"], texture_names)
  
                 color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
@@ -744,7 +822,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
                 color5 = (mat["mat_color5_r"], mat["mat_color5_g"], mat["mat_color5_b"], 1.0)
                 color8 = (mat["mat_color8_r"], mat["mat_color8_g"], mat["mat_color8_b"], 1.0)
-                if "eye" in mat["mat_name"] and "pm" in trmtr_name:
+                if eye_material and "pm" in trmtr_name:
                     shadegroupnodes.inputs['LowEye_color'].default_value = color8
                 emcolor1 = (mat["mat_emcolor1_r"], mat["mat_emcolor1_g"], mat["mat_emcolor1_b"], 1.0)
                 emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
@@ -771,7 +849,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 shadegroupnodes.inputs['LayerMaskScale3'].default_value = mat["mat_lym_scale3"]
                 shadegroupnodes.inputs['LayerMaskScale4'].default_value = mat["mat_lym_scale4"]
                 if enable_mega_effect == True:
-                    if "eye" not in mat["mat_name"]:
+                    if not eye_material:
                         shadegroupnodes.inputs['MegaEffect'].default_value = 1.0
 
                 shcolor1 = (mat["mat_shcolor1_r"], mat["mat_shcolor1_g"], mat["mat_shcolor1_b"], 1.0)
@@ -786,9 +864,10 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 shadegroupnodes.inputs['ShadowingColorLayer2'].default_value = shcolor3
                 shadegroupnodes.inputs['ShadowingColorLayer3'].default_value = shcolor4
                 shadegroupnodes.inputs['ShadowingColorLayer4'].default_value = shcolor5
-                
-                if "Opaque" not in mat["mat_alpha_setting"]:
-                    material.blend_method = 'BLEND'
+
+                # Configure material render settings after we know whether the material is
+                # likely an eye, so eye shaders can avoid the fragile generic BLEND path.
+                configure_material_render_settings(material, mat, is_eye=eye_material)
                 if mat["mat_uv_scale_u"] > 1.0 or mat["mat_uv_scale_v"] > 1.0:
                     tex_coord_node = material.node_tree.nodes.new(type="ShaderNodeTexCoord")
                     mapping_node = material.node_tree.nodes.new(type="ShaderNodeMapping")
