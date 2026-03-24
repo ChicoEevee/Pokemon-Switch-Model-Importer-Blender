@@ -815,7 +815,13 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     if texture_file:
                         texture_names.append(texture_file)
                 eye_material = is_eye_material(mat["mat_name"], texture_names)
- 
+
+                print(f"[MAT-DEBUG] {mat['mat_name']}: eye={eye_material}, highlight={mat['mat_enable_highlight_map']}, "
+                      f"col0={mat['mat_col0']!r}, lym0={mat['mat_lym0']!r}, "
+                      f"highmsk0={mat['mat_highmsk0']!r}, msk0={mat['mat_msk0']!r}, "
+                      f"opacity_map={mat['mat_opacity_map']!r}, "
+                      f"color5=({mat['mat_color5_r']:.3f},{mat['mat_color5_g']:.3f},{mat['mat_color5_b']:.3f})")
+
                 color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
                 color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
@@ -828,6 +834,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
                 emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)
                 emcolor4 = (mat["mat_emcolor4_r"], mat["mat_emcolor4_g"], mat["mat_emcolor4_b"], 1.0)
+                shadegroupnodes.inputs['BaseColor'].default_value = basecolor
                 shadegroupnodes.inputs['BaseColorLayer1'].default_value = color1
                 shadegroupnodes.inputs['BaseColorLayer2'].default_value = color2
                 shadegroupnodes.inputs['BaseColorLayer3'].default_value = color3
@@ -1005,7 +1012,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 if os.path.exists(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension)) == True:
                     opacity_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     opacity_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_opacity_map"][:-5] + textureextension))
-                    material.node_tree.links.new(opacity_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
+                    material.node_tree.links.new(opacity_image_texture.outputs[0], shadegroupnodes.inputs['AlbedoAlpha'])
                     width, height = opacity_image_texture.image.size
                     if width != height:
                         if mat["mat_uv_scale_u"] > 1 or mat["mat_uv_scale_v"] > 1:
@@ -1014,20 +1021,20 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                 try:
                     if mat["mat_enable_highlight_map"]:
                         highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        base_path = os.path.join(filep, mat["mat_lym0"][:-5])
                         if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + textureextension)):
                             highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + textureextension))
                             material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
-                        else:
+                        elif eye_material:
+                            base_path = os.path.join(filep, mat["mat_lym0"][:-5])
                             if "r_eye" in material.name:
                                 primary = base_path.replace("eye_lym", "r_eye_msk") + ".png"
                             elif "l_eye" in material.name:
                                 primary = base_path.replace("eye_lym", "l_eye_msk") + ".png"
                             else:
                                 primary = None
-                        
+
                             fallback = base_path.replace("eye_lym", "eye_msk").replace("lym", "msk") + ".png"
-                        
+
                             for path in [primary, fallback] if primary else [fallback]:
                                 full_path = os.path.join(filep, path)
                                 if os.path.exists(full_path):
@@ -1035,7 +1042,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                                     material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
                                     break
                 except:
-                    print("Issue loading hightlight map")
+                    print("Issue loading highlight map")
                 #EyelidType Upper is Disabled for now~
                 if mat["mat_eyelid_type"] == "Lower":
                     eyelid_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1070,14 +1077,14 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                     emission_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     if os.path.exists(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension)) == True:
                         emission_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension))
-                    material.node_tree.links.new(emission_image_texture.outputs[0], shadegroupnodes.inputs['Emission'])
-                
+                        material.node_tree.links.new(emission_image_texture.outputs[0], shadegroupnodes.inputs['Emission'])
+
                 if mat["mat_enable_roughness_map"]:
                     roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     if os.path.exists(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension)) == True:
                         roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
                         roughness_image_texture.image.colorspace_settings.name = "Non-Color"
-                    material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Roughness'])
+                        material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Roughness'])
 
                 if os.path.exists(os.path.join(filep, mat["mat_spec_map0"][:-5] + textureextension)) == True:
                     specular_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
