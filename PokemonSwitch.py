@@ -1958,7 +1958,7 @@ def from_trmdlsv(filep, trmdlname, rare, loadlods, rotate90, enable_metal_prb, e
                                                     tany = readhalffloat(trmbf)
                                                     tanz = readhalffloat(trmbf)
                                                     tanq = readhalffloat(trmbf)
-                                                    if MorphVertIDs_array[v] != 0:
+                                                    if MorphVertIDs_array[v] != -1:
                                                         MorphVert_array[MorphVertIDs_array[v]] = [vert_array[MorphVertIDs_array[v]][0] + vx, vert_array[MorphVertIDs_array[v]][1] + vy, vert_array[MorphVertIDs_array[v]][2] + vz]
                                                         MorphNormal_array[MorphVertIDs_array[v]] = [vert_array[MorphVertIDs_array[v]][0] + nx, vert_array[MorphVertIDs_array[v]][1] + ny, vert_array[MorphVertIDs_array[v]][2] + nz]
                                                 Morphs_array.append(MorphVert_array)
